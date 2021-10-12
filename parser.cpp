@@ -87,7 +87,9 @@ std::vector<Statement> Parser::parse_block() {
 				block.push_back(parse_name(token)); // This can be FUNC_CALL or VAR_REASIGNATION 
 				break;
 			// case Token::Type::TOKEN_TYPE_VAR: block.push_back(parse_var_declaration(token));
-			case Token::Type::TOKEN_TYPE_RETURN: block.push_back(parse_return());
+			case Token::Type::TOKEN_TYPE_RETURN:
+				block.push_back(parse_return());
+				break;
 			case Token::Type::TOKEN_TYPE_CLOSE_CURLY: 
 				unfinished_block = false;
 				break;

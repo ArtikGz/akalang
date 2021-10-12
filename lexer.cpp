@@ -77,6 +77,8 @@ Token Lexer::form_name(char c) {
 		return Token(Token::Type::TOKEN_TYPE_IF, value);
 	} else if (value == "for") {
 		return Token(Token::Type::TOKEN_TYPE_FOR, value);
+	} else if (value == "include") {
+		return Token(Token::Type::TOKEN_TYPE_INCLUDE_DIRECTIVE, value);
 	}
 
 	return Token(Token::Type::TOKEN_TYPE_NAME, value);
@@ -130,9 +132,18 @@ std::string Lexer::get_file_content() { return this->file_content; }
 void Lexer::set_tokens(std::vector<Token> tokens) { this->tokens = tokens; }
 std::vector<Token> Lexer::get_tokens() { return this->tokens; }
 
+Lexer::Lexer() {}
 Lexer::Lexer(std::string filepath) : file_content(Utils::read_file(filepath)) {
 	this->index = 0;
 	tokenize();
 }
 
-static_assert(Token::Type::TOKEN_COUNTER == 23, "Unhandled TOKEN_COUNTER on lexer.cpp");
+Lexer Lexer::from_content(std::string content) {
+	Lexer lexer = Lexer();
+	lexer.set_file_content(content);
+	lexer.index = 0;
+	lexer.tokenize();
+	return lexer;
+}
+
+static_assert(Token::Type::TOKEN_COUNTER == 24, "Unhandled TOKEN_COUNTER on lexer.cpp");

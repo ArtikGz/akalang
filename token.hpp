@@ -27,6 +27,7 @@ public:
 		TOKEN_TYPE_NAME,
 		TOKEN_TYPE_LITERAL_NUMBER,
 		TOKEN_TYPE_LITERAL_STRING,
+		TOKEN_TYPE_INCLUDE_DIRECTIVE,
 		TOKEN_COUNTER,
 	};
 	Token(Type type, char c);
@@ -42,5 +43,3 @@ public:
 	void set_value(std::string value);
 	std::string get_value();
 };
-
-static_assert(Token::Type::TOKEN_COUNTER == 23, "Number of tokens have been updated");

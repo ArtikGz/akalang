@@ -29,5 +29,7 @@ public:
 	Token next_token();
 	Token explore_next_token();
 	bool is_parsed();
+	static Lexer from_content(std::string content);
 	Lexer(std::string filepath);
+	Lexer();
 };

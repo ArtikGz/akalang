@@ -4,6 +4,7 @@
 #include "lexer.hpp"
 #include "parser.hpp"
 #include "compiler.hpp"
+#include "preprocessor.hpp"
 
 int main(int argc, char** argv) {
 	if (argc < 2) {
@@ -12,8 +13,10 @@ int main(int argc, char** argv) {
 	}
 
 	std::string filename = argv[1];
-	Lexer lex = Lexer(filename);
+	std::string preprocessed_file = Preprocessor::preprocess_includes(filename);
+	Lexer lex = Lexer::from_content(preprocessed_file);
 	std::cout << lex.get_file_content() << std::endl;
+
 
 	Parser parser = Parser(&lex);
 	std::vector<Statement> statements = parser.parse_code();
