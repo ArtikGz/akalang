@@ -15,9 +15,26 @@ $ ./main main.aka
 ```
 
 ## Examples
-Hello world: 
+### Hello world: 
 ```go
 fnc main() > int {
   println("Hello, world");
+}
+```
+
+### Includes:
+test.aka:
+```go
+fnc test() > int {
+	println("Hello, world!");
+}
+```
+
+main.aka:
+```go
+include "test.aka";
+
+fnc main() > int {
+	test();
 }
 ```
