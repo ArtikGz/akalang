@@ -86,9 +86,11 @@ std::vector<Statement> Parser::parse_block() {
 			case Token::Type::TOKEN_TYPE_NAME: 
 				block.push_back(parse_name(token)); // This can be FUNC_CALL or VAR_REASIGNATION 
 				break;
-			// case Token::Type::TOKEN_TYPE_VAR: block.push_back(parse_var_declaration(token));
 			case Token::Type::TOKEN_TYPE_RETURN:
 				block.push_back(parse_return());
+				break;
+			case Token::Type::TOKEN_TYPE_VAR:
+				block.push_back(parse_var());
 				break;
 			case Token::Type::TOKEN_TYPE_CLOSE_CURLY: 
 				unfinished_block = false;
@@ -112,6 +114,19 @@ Statement Parser::parse_return() {
 	return ret;
 }
 
+Statement Parser::parse_var() {
+	Statement var;
+	var.type = STMT_TYPE_VAR_DECLARATION;
+	Token token = lexer->expect_next_token(Token::Type::TOKEN_TYPE_NAME, "Parsing error: expected name after var keyword");
+	var.as.var.name = token.get_value();
+	lexer->expect_next_token(Token::Type::TOKEN_TYPE_COLON, "Parsing error: untyped variables are not allowed");
+	token = lexer->expect_next_token(Token::Type::TOKEN_TYPE_NAME, "Parsing error: untyped variables are not allowed");
+	var.as.var.type = get_type_from_string(token.get_value());
+	lexer->expect_next_token(Token::Type::TOKEN_TYPE_EQUALS, "Parsing error: expected expresion after variable declaration");
+	var.as.var.value = parse_expr(lexer->next_token());
+	return var;
+}
+
 Statement Parser::parse_name(Token token) {
 	Token ntoken = lexer->next_token();
 	switch (ntoken.get_type()) {
@@ -130,7 +145,8 @@ Statement Parser::parse_name(Token token) {
 Statement Parser::parse_var_reasignation(Token name) {
 	Statement stmt;
 	stmt.type = STMT_TYPE_VAR_REASIGNATION;
-	// static_assert(false, "TODO parse_var_reasignation()");
+	stmt.as.var.name = name.get_value();
+	stmt.as.var.value = parse_expr(lexer->next_token());
 	return stmt;
 }
 

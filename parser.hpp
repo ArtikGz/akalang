@@ -26,6 +26,7 @@ typedef enum {
 	STMT_TYPE_VAR_REASIGNATION,
 	STMT_TYPE_RETURN,
 	STMT_TYPE_EXPR,
+	STMT_TYPE_VAR_DECLARATION,
 	STMT_TYPE_COUNTER
 } StmtType;
 
@@ -84,7 +85,7 @@ struct StmtAs {
 	Var_Asign var;
 	Expr expr;
 };
-static_assert(STMT_TYPE_COUNTER == 4, "Unhandled STMT_TYPE_COUNTER on parser.hpp");
+static_assert(STMT_TYPE_COUNTER == 5, "Unhandled STMT_TYPE_COUNTER on parser.hpp");
 
 struct Statement {
 	StmtType type;
@@ -106,6 +107,7 @@ public:
 	Statement parse_name(Token token);
 	Statement parse_return();
 	Statement parse_var_reasignation(Token name);
+	Statement parse_var();
 	Func_Call parse_func_call(Token name);
 	std::vector<Expr> parse_func_call_args(Token token);
 	Expr parse_expr(Token token);

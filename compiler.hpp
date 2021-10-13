@@ -4,6 +4,16 @@
 #include "parser.hpp"
 #include "lexer.hpp"
 
+typedef struct {
+	int rbp_offset;
+	VarType type;
+} Var_Declared;
+
+typedef struct {
+	int rbp_offset;
+	std::map<std::string, Var_Declared> var_declare;
+} Shared_Info;
+
 // Registers order for function parameters
 const std::vector<std::string> x64regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 const std::vector<std::string> x32regs = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
@@ -27,14 +37,17 @@ private:
 
 public:
 	Compiler(std::vector<Statement> instructions);
-	std::string compile_statement(Statement stmt);
+	std::string compile_statement(Statement stmt, Shared_Info& si);
 	std::string compile_function(Statement function);
-	std::string compile_return(Statement stmt);
-	std::string compile_expr(Expr expr);
-	std::string compile_func_call(Expr expr);
+	std::string compile_return(Statement stmt, Shared_Info& si);
+	std::string compile_var(Statement stmt, Shared_Info& si);
+	std::string compile_var_reasignation(Statement stmt, Shared_Info& si);
+	std::string compile_expr(Expr expr, Shared_Info& si);
+	std::string compile_func_call(Expr expr, Shared_Info& si);
 	std::string compile_boolean(Expr expr);
 	std::string compile_number(Expr expr);
 	std::string compile_string(Expr expr);
+	std::string compile_var_read(Expr expr, Shared_Info& si);
 	std::string compile_program();
 	std::string build_data_segment();
 	std::string compile_builtin();

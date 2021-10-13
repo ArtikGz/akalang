@@ -11,10 +11,7 @@ std::string Compiler::compile_program() {
 	for (Statement stmt: instructions) {
 		program += compile_function(stmt);
 	}
-
-	if (string_data_segment.size() > 0) {
-		program += build_data_segment();
-	}
+	program += build_data_segment();
 
 	return program;
 }
@@ -34,9 +31,9 @@ std::string Compiler::compile_builtin() {
 }
 
 std::string Compiler::compile_function(Statement function) {
-	std::string compiled_function;
-	int rbp_offset = 0;
-
+	Shared_Info si;
+	std::stringstream body;
+	si.rbp_offset = 0;
 	if (function.as.fnc.arguments.size() > 6) {
 		Utils::error("No more than 6 arguments on functions are allowed.");
 	}
@@ -44,47 +41,84 @@ std::string Compiler::compile_function(Statement function) {
 	std::vector<VarType> data_types;
 	int param_counter = 0;
 	for (Func_Arg arg: function.as.fnc.arguments) {
-		inc_rbp_offset(rbp_offset, arg.type);
+		inc_rbp_offset(si.rbp_offset, arg.type);
 		std::string reg = get_reg_by_data_type_and_counter(param_counter, arg.type);
 		std::string data_size = get_data_size_by_data_type(arg.type);
-
-		char tmp[50] = {0};
-		sprintf(tmp, "\tmov %s [rbp - %d], %s\n", data_size.c_str(), rbp_offset, reg.c_str());
-		compiled_function += tmp;
+		body << "\tmov " << data_size <<  " [rbp - " << si.rbp_offset << "], " << reg << "\n";
+		si.var_declare[arg.name] = {.rbp_offset = si.rbp_offset, .type = arg.type};
 		data_types.push_back(arg.type);
 	}
-
 	global_function_register[function.as.fnc.name] = data_types;
 
 	for (Statement stmt: function.as.fnc.body) {
-		compiled_function += compile_statement(stmt);
+		body << compile_statement(stmt, si);
 	}
 
-	char header[200] = {0};
-	sprintf(header, "%s:\n\tpush rbp\n\tmov rbp, rsp\n\tsub rsp, %d\n", function.as.fnc.name.c_str(), rbp_offset);
-	char footer[200] = {0};
-	sprintf(footer, "\tadd rsp, %d\n\tpop rbp\n\tret\n", rbp_offset);
-	return header + compiled_function + footer;
+	std::stringstream compiled_function;
+	compiled_function << function.as.fnc.name << ":\n\tpush rbp\n\tmov rbp, rsp\n\tsub rsp, " << si.rbp_offset << "\n";
+	compiled_function << body.str();
+	compiled_function << ".retpoint:\n\tadd rsp, " << si.rbp_offset << "\n\tpop rbp\n\tret\n";
+
+	return compiled_function.str();
 }
 
-std::string Compiler::compile_statement(Statement stmt) {
-	// TODO add assertion STMT_TYPE_COUNTER
+std::string Compiler::compile_statement(Statement stmt, Shared_Info& si) {
+	static_assert(STMT_TYPE_COUNTER == 5, "Unhandled STMT_TYPE_COUNTER on compile_statement on compiler.cpp");
 	switch (stmt.type) {
-		case STMT_TYPE_EXPR: return compile_expr(stmt.as.expr);
-		case STMT_TYPE_RETURN: return compile_return(stmt);
-		default: Utils::error("Unknowwn expression");
+		case STMT_TYPE_EXPR: return compile_expr(stmt.as.expr, si);
+		case STMT_TYPE_RETURN: return compile_return(stmt, si);
+		case STMT_TYPE_VAR_DECLARATION: return compile_var(stmt, si);
+		case STMT_TYPE_VAR_REASIGNATION: return compile_var_reasignation(stmt, si);
+		default: Utils::error("Unknown expression");
 	}
 }
 
-std::string Compiler::compile_expr(Expr expr) {
-	// TODO add assertion EXPR_TYPE_COUNTER
+std::string Compiler::compile_expr(Expr expr, Shared_Info& si) {
+	static_assert(EXPR_TYPE_COUNTER == 5, "Unhandled EXPR_TYPE_COUNTER in compiler_expr on compiler.cpp");
 	switch (expr.type) {
-		case EXPR_TYPE_FUNC_CALL: return compile_func_call(expr);
+		case EXPR_TYPE_FUNC_CALL: return compile_func_call(expr, si);
 		case EXPR_TYPE_LITERAL_BOOL: return compile_boolean(expr);
 		case EXPR_TYPE_LITERAL_NUMBER: return compile_number(expr);
 		case EXPR_TYPE_LITERAL_STRING: return compile_string(expr);
+		case EXPR_TYPE_VAR_READ: return compile_var_read(expr, si);
 		default: Utils::error("Unknown expression");
 	}
+}
+
+std::string Compiler::compile_var(Statement stmt, Shared_Info& si) {
+	std::stringstream ss;
+	if (si.var_declare.count(stmt.as.var.name) != 0) {
+		Utils::error("Variable already declared before: " + stmt.as.var.name);
+	}
+
+	ss << compile_expr(stmt.as.var.value, si);
+	inc_rbp_offset(si.rbp_offset, stmt.as.var.type);
+	ss << "\tmov [rbp - " << si.rbp_offset << "], " << get_return_reg_by_data_type(stmt.as.var.type) << "\n";
+	si.var_declare[stmt.as.var.name] = {.rbp_offset = si.rbp_offset, .type = stmt.as.var.type};
+	return ss.str();
+}
+
+std::string Compiler::compile_var_reasignation(Statement stmt, Shared_Info& si) {
+	std::stringstream ss;
+	if (si.var_declare.count(stmt.as.var.name) == 0) {
+		Utils::error("Trying to reasign an undeclared variable: " + stmt.as.var.name);
+	}
+	Var_Declared vd = si.var_declare[stmt.as.var.name];
+
+	ss << compile_expr(stmt.as.var.value, si);
+	ss << "\tmov [rbp - " << vd.rbp_offset << "], "  << get_return_reg_by_data_type(vd.type) << "\n";
+	return ss.str();
+}
+
+std::string Compiler::compile_var_read(Expr expr, Shared_Info& si) {
+	std::stringstream ss;
+	if (si.var_declare.count(expr.as.var_read) == 0) {
+		Utils::error("Undefined variable: " + expr.as.var_read);
+	}
+	Var_Declared vd = si.var_declare[expr.as.var_read];
+
+	ss << "\tmov " << get_return_reg_by_data_type(vd.type) << ", [rbp - " << vd.rbp_offset << "]\n";
+	return ss.str();
 }
 
 std::string Compiler::compile_boolean(Expr expr) {
@@ -99,14 +133,12 @@ std::string Compiler::compile_boolean(Expr expr) {
 }
 
 std::string Compiler::compile_number(Expr expr) {
-	std::string compiled_number;
-	char exprstr[10];
-	sprintf(exprstr, "%d", expr.as.number);
-	compiled_number = "\tmov eax, " ;
-	compiled_number += exprstr;
-	compiled_number += "\n";
+	std::stringstream compiled_number;
+	compiled_number << "\tmov eax, " ;
+	compiled_number << expr.as.number;
+	compiled_number << "\n";
 
-	return compiled_number;
+	return compiled_number.str();
 }
 
 std::string Compiler::compile_string(Expr expr) {
@@ -126,9 +158,8 @@ std::string Compiler::compile_string(Expr expr) {
 	return "\tmov rax, " + std::string(str) + "\n";
 }
 
-std::string Compiler::compile_func_call(Expr expr) {
-	std::string compiled_func_call;
-
+std::string Compiler::compile_func_call(Expr expr, Shared_Info& si) {
+	std::stringstream compiled_func_call;
 	if (expr.as.func_call.expr.size() > 6) {
 		Utils::error("Max number of params allowed in functions: 6");
 	}
@@ -156,6 +187,7 @@ std::string Compiler::compile_func_call(Expr expr) {
 		} else {
 			rest_regs.push_back(get_reg_by_data_type_and_counter(param_counter, data_type[param_counter]));
 		}
+
 		param_counter++;
 	}
 
@@ -163,8 +195,8 @@ std::string Compiler::compile_func_call(Expr expr) {
 	int index_counter = 0;
 	for (Expr expr: expr.as.func_call.expr) {
 		if (expr.type == EXPR_TYPE_FUNC_CALL) {
-			compiled_func_call += compile_expr(expr);
-			compiled_func_call += "\tmov " + func_regs[index_counter++] + ", " +  get_return_reg_by_data_type(data_type[param_counter]) + "\n";
+			compiled_func_call << compile_expr(expr, si);
+			compiled_func_call << "\tmov " + func_regs[index_counter++] + ", " +  get_return_reg_by_data_type(data_type[param_counter]) + "\n";
 		}
 
 		param_counter++;
@@ -174,24 +206,22 @@ std::string Compiler::compile_func_call(Expr expr) {
 	index_counter = 0;
 	for (Expr expr: expr.as.func_call.expr) {
 		if (expr.type != EXPR_TYPE_FUNC_CALL) {
-			compiled_func_call += compile_expr(expr);
-			compiled_func_call += "\tmov " + rest_regs[index_counter++] + ", " + get_return_reg_by_data_type(data_type[param_counter]) + "\n";
+			compiled_func_call << compile_expr(expr, si);
+			compiled_func_call << "\tmov " + rest_regs[index_counter++] + ", " + get_return_reg_by_data_type(data_type[param_counter]) + "\n";
 		}
 
 		param_counter++;
 	}
 
-	compiled_func_call += "\tcall " + expr.as.func_call.name + "\n";
-	return compiled_func_call;
+	compiled_func_call << "\tcall " + expr.as.func_call.name + "\n";
+	return compiled_func_call.str();
 }
 
-std::string Compiler::compile_return(Statement stmt) {
-	std::string compiled_return;
-	// std::string return_register = get_return_reg_by_data_type(stmt.as.fnc.return_type);
-	compiled_return += compile_expr(stmt.as.expr);
-	compiled_return += "\tret\n";
+std::string Compiler::compile_return(Statement stmt, Shared_Info& si) {
+	std::stringstream compiled_return;
+	compiled_return << compile_expr(stmt.as.expr, si) << "\tjmp .retpoint\n";
 
-	return compiled_return;
+	return compiled_return.str();
 }
 
 void Compiler::inc_rbp_offset(int& rbp_offset, VarType data_type) {
@@ -239,16 +269,13 @@ std::string Compiler::get_data_size_by_data_type(VarType data_type) {
 }
 
 std::string Compiler::build_data_segment() {
-	std::string compiled_data_segment = "segment .data\n";
+	std::stringstream compiled_data_segment;
+	compiled_data_segment << "segment .data\n";
 	int c = 0;
 	for (const std::string& str: string_data_segment) {
-		compiled_data_segment += "\t";
-		char identifier[3] = {0};
-		sprintf(identifier, "V%d", c++);
-		compiled_data_segment += identifier;
-		compiled_data_segment += " db " + str;
+		compiled_data_segment << "\tV" << c++ << " db " << str;
 	}
-	compiled_data_segment += "\tln db 0x0A\n";
+	compiled_data_segment << "\tln db 0x0A\n";
 
-	return compiled_data_segment;
+	return compiled_data_segment.str();
 }
