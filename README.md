@@ -15,14 +15,15 @@ $ ./main main.aka
 ```
 
 ## Examples
-### Hello world: 
+### Hello world
 ```go
 fnc main() > int {
-  println("Hello, world");
+	println("Hello, world");
+	return 0;
 }
 ```
 
-### Includes:
+### Includes
 test.aka:
 ```go
 fnc test() > int {
@@ -36,5 +37,17 @@ include "test.aka";
 
 fnc main() > int {
 	test();
+	return 0;
+}
+```
+
+### Variables
+```go
+fnc main() > int {
+	var varname: str = "Hello, world";
+	println(varname); // Hello, world
+	varname = "Hello, world!!!";
+	println(varname); // Hello, world!!!
+	return 0;
 }
 ```
