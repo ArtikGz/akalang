@@ -15,9 +15,10 @@ Token Lexer::get_next_token() {
 		case ':': return Token(Token::Type::TOKEN_TYPE_COLON, c);
 		case ',': return Token(Token::Type::TOKEN_TYPE_COMMA, c);
 		case '=': return Token(Token::Type::TOKEN_TYPE_EQUALS, c);
-		case '-': return Token(Token::Type::TOKEN_TYPE_MINUS, c);
-		case '+': return Token(Token::Type::TOKEN_TYPE_PLUS, c);
-		case '/': return Token(Token::Type::TOKEN_TYPE_SLASH, c);
+		case '-': return Token(Token::Type::TOKEN_TYPE_SUB, c);
+		case '+': return Token(Token::Type::TOKEN_TYPE_ADD, c);
+		case '/': return Token(Token::Type::TOKEN_TYPE_DIV, c);
+		case '*': return Token(Token::Type::TOKEN_TYPE_MUL, c);
 		case '"': return form_string(c);
 		case ' ':
 		case '\n':
@@ -32,7 +33,7 @@ Token Lexer::get_next_token() {
 		return form_name(c);
 	}
 
-	Utils::error("Unexpected token");
+	Utils::error("Unexpected token: " + c);
 }
 
 bool Lexer::has_more_tokens() {
@@ -146,4 +147,4 @@ Lexer Lexer::from_content(std::string content) {
 	return lexer;
 }
 
-static_assert(Token::Type::TOKEN_COUNTER == 24, "Unhandled TOKEN_COUNTER on lexer.cpp");
+static_assert(Token::Type::TOKEN_COUNTER == 25, "Unhandled TOKEN_COUNTER on lexer.cpp");

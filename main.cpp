@@ -13,8 +13,9 @@ int main(int argc, char** argv) {
 	}
 
 	std::string filename = argv[1];
-	std::string preprocessed_file = Preprocessor::preprocess_includes(filename);
-	Lexer lex = Lexer::from_content(preprocessed_file);
+	// std::string preprocessed_file = Preprocessor::preprocess_includes(filename);
+	// Lexer lex = Lexer::from_content(preprocessed_file);
+	Lexer lex = Lexer(filename);
 	std::cout << lex.get_file_content() << std::endl;
 
 

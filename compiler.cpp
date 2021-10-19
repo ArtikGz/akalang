@@ -12,20 +12,25 @@ std::string Compiler::compile_program() {
 		program += compile_function(stmt);
 	}
 	program += build_data_segment();
+	program += build_bss_segment();
 
 	return program;
 }
 
 std::string Compiler::compile_builtin() {
 	std::string builtin_functions;
-	std::vector<std::string> source_list {"print.asm", "len.asm", "println.asm"};
+	std::vector<std::string> source_list {"print.asm", "len.asm", "println.asm", "input.asm", "socket.asm", "connect.asm", "printint.asm"};
 	for (const std::string& source: source_list) {
 		builtin_functions += Utils::read_file(BUILTIN_PATH + source);
 	}
 
-	global_function_register["__BUILTIN_PRINT"] = std::vector<VarType> {VAR_TYPE_STR, VAR_TYPE_INT}; // print.asm
+	global_function_register["print"] = std::vector<VarType> {VAR_TYPE_STR}; // print.asm
 	global_function_register["len"] = std::vector<VarType> {VAR_TYPE_STR}; // len.asm
 	global_function_register["println"] = std::vector<VarType> {VAR_TYPE_STR}; // println.asm
+	global_function_register["input"] = std::vector<VarType> {VAR_TYPE_STR}; // input.asm
+	global_function_register["socket"] = std::vector<VarType> {VAR_TYPE_INT, VAR_TYPE_INT, VAR_TYPE_INT}; // socket.asm
+	global_function_register["connect"] = std::vector<VarType> {VAR_TYPE_INT}; // connect.asm
+	global_function_register["printint"] = std::vector<VarType> {VAR_TYPE_INT}; // printint.asm
 
 	return builtin_functions;
 }
@@ -74,14 +79,65 @@ std::string Compiler::compile_statement(Statement stmt, Shared_Info& si) {
 }
 
 std::string Compiler::compile_expr(Expr expr, Shared_Info& si) {
-	static_assert(EXPR_TYPE_COUNTER == 5, "Unhandled EXPR_TYPE_COUNTER in compiler_expr on compiler.cpp");
+	static_assert(EXPR_TYPE_COUNTER == 6, "Unhandled EXPR_TYPE_COUNTER in compiler_expr on compiler.cpp");
 	switch (expr.type) {
 		case EXPR_TYPE_FUNC_CALL: return compile_func_call(expr, si);
 		case EXPR_TYPE_LITERAL_BOOL: return compile_boolean(expr);
 		case EXPR_TYPE_LITERAL_NUMBER: return compile_number(expr);
 		case EXPR_TYPE_LITERAL_STRING: return compile_string(expr);
 		case EXPR_TYPE_VAR_READ: return compile_var_read(expr, si);
+		case EXPR_TYPE_OP: return compile_op(expr, si);
 		default: Utils::error("Unknown expression");
+	}
+}
+
+void Compiler::compile_op_tree(Expr expr, std::stack<Expr>& expr_stack, std::stack<OpType>& op_stack) {
+	if (expr.type == EXPR_TYPE_OP) {
+		compile_op_tree(*expr.as.op.rhs, expr_stack, op_stack);
+		op_stack.push(expr.as.op.type);
+		compile_op_tree(*expr.as.op.lhs, expr_stack, op_stack);
+	} else {
+		expr_stack.push(expr);
+	}
+}
+
+std::string Compiler::compile_op(Expr expr, Shared_Info& si) {
+	std::stack<Expr> expr_stack;
+	std::stack<OpType> op_stack;
+	compile_op_tree(expr, expr_stack, op_stack);
+
+	std::stringstream ss;
+	Expr cexpr = expr_stack.top();
+	expr_stack.pop();
+	ss << compile_expr(cexpr, si) << "\tmov ebx, eax\n";
+
+	cexpr = expr_stack.top();
+	expr_stack.pop();
+	ss << compile_expr(cexpr, si) << compile_operation(op_stack.top());
+	op_stack.pop();
+
+	while(!op_stack.empty()) {
+		expr = expr_stack.top();
+		expr_stack.pop();
+		ss << compile_expr(cexpr, si) << compile_operation(op_stack.top());
+		op_stack.pop();
+	}
+
+	ss << "\tmov eax, ebx\n";
+	return ss.str();
+}
+
+std::string Compiler::compile_operation(OpType type) {
+	switch (type) {
+		case OP_TYPE_ADD:
+			return "\tadd ebx, eax\n";
+		case OP_TYPE_SUB:
+			return "\tsub ebx, eax\n";
+		// case OP_TYPE_DIV: TODO
+		// 	return "\tidiv rbx, rax\n";
+		case OP_TYPE_MUL:
+			return "\timul ebx, eax\n";
+		default: Utils::error("Unknown operation: " + type);
 	}
 }
 
@@ -93,7 +149,7 @@ std::string Compiler::compile_var(Statement stmt, Shared_Info& si) {
 
 	ss << compile_expr(stmt.as.var.value, si);
 	inc_rbp_offset(si.rbp_offset, stmt.as.var.type);
-	ss << "\tmov [rbp - " << si.rbp_offset << "], " << get_return_reg_by_data_type(stmt.as.var.type) << "\n";
+	ss << "\tmov " << get_data_size_by_data_type(stmt.as.var.type) << "[rbp - " << si.rbp_offset << "], " << get_return_reg_by_data_type(stmt.as.var.type) << "\n";
 	si.var_declare[stmt.as.var.name] = {.rbp_offset = si.rbp_offset, .type = stmt.as.var.type};
 	return ss.str();
 }
@@ -167,7 +223,7 @@ std::string Compiler::compile_func_call(Expr expr, Shared_Info& si) {
 	// Check if function is declared
 	int func = global_function_register.count(expr.as.func_call.name);
 	if (func == 0) {
-		Utils::error("Undefined function");
+		Utils::error("Undefined function: " + expr.as.func_call.name);
 	}
 
 	std::vector<VarType> data_type = global_function_register[expr.as.func_call.name];
@@ -278,4 +334,11 @@ std::string Compiler::build_data_segment() {
 	compiled_data_segment << "\tln db 0x0A\n";
 
 	return compiled_data_segment.str();
+}
+
+std::string Compiler::build_bss_segment() {
+	std::stringstream compiled_bss_segment;
+	compiled_bss_segment << "segment .bss\n";
+	compiled_bss_segment << "\tinputstr resb 50\n";
+	return compiled_bss_segment.str();
 }

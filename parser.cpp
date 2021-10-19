@@ -1,3 +1,5 @@
+#include <iostream>
+#include <cstring>
 #include "parser.hpp"
 
 Parser::Parser(Lexer* lexer) : tokens(lexer->get_tokens()), lexer(lexer) {}
@@ -185,7 +187,11 @@ std::vector<Expr> Parser::parse_func_call_args(Token token) {
 }
 
 Expr Parser::parse_expr(Token token) {
-	static_assert(EXPR_TYPE_COUNTER == 5, "Unhandled EXPR_TYPE_FUNC_COUNT on parse_expr() on file parser.cpp");
+	return parse_expr_with_precedence(token, OP_PREC_0);
+}
+
+Expr Parser::parse_primary_expr(Token token) {
+	static_assert(EXPR_TYPE_COUNTER == 6, "Unhandled EXPR_TYPE_FUNC_COUNT on parse_expr() on file parser.cpp");
 	switch (token.get_type()) {
 		case Token::Type::TOKEN_TYPE_NAME:
 			if (token.get_value() == "true") {
@@ -222,11 +228,71 @@ Expr Parser::parse_expr(Token token) {
 
 		case Token::Type::TOKEN_TYPE_LITERAL_STRING: {
 			Expr expr;
+			expr.as.boolean = true; 
 			expr.type = EXPR_TYPE_LITERAL_STRING;
 			expr.as.string = token.get_value(); // TODO add string parse
 			return expr;
 		}
 	}
 
-	Utils::error("Unexpected parsing expression");
+	Utils::error("Unexpected parsing expression: " + token.get_value());
+}
+
+Expr Parser::parse_expr_with_precedence(Token token, OpPrec prec) {
+	Expr expr;
+	Expr lhs = parse_primary_expr(token);
+	token = lexer->explore_next_token();
+	if (is_op(token)) {
+		lexer->next_token();
+		expr.type = EXPR_TYPE_OP;
+		Op op;
+		op.type = get_op_type_by_token_type(token);
+
+		op.lhs = new Expr();
+		memcpy(op.lhs, &lhs, sizeof(Expr));
+
+		Expr rhs = parse_expr_with_precedence(lexer->next_token(), OP_PREC_0);
+		op.rhs = new Expr();
+		memcpy(op.rhs, &rhs, sizeof(Expr));
+		expr.as.op = op;
+	} else {
+		expr = lhs;
+	}
+
+	return expr;
+}
+
+OpType Parser::get_op_type_by_token_type(Token token) {
+	static_assert(OP_TYPE_COUNT == 4, "Unhandled OP_TYPE_COUNT on get_op_type_by_token_type at parser.cpp");
+	switch (token.get_type()) {
+		case Token::Type::TOKEN_TYPE_ADD: return OP_TYPE_ADD;
+		case Token::Type::TOKEN_TYPE_SUB: return OP_TYPE_SUB;
+		case Token::Type::TOKEN_TYPE_MUL: return OP_TYPE_MUL;
+		case Token::Type::TOKEN_TYPE_DIV: return OP_TYPE_DIV;
+		default: Utils::error("Unknown token type: " + token.get_value());
+	}
+}
+
+OpPrec Parser::get_prec_by_op_type(OpType op_type) {
+	static_assert(OP_TYPE_COUNT == 4, "Unhandled OP_TYPE_COUNT on get_prec_by_op_type at parser.cpp");
+	switch (op_type) {
+		case OP_TYPE_ADD: return OP_PREC_0;
+		case OP_TYPE_SUB: return OP_PREC_0;
+		case OP_TYPE_MUL: return OP_PREC_1;
+		case OP_TYPE_DIV: return OP_PREC_1;
+		default: Utils::error("Unknown operation type");
+	}
+}
+
+bool Parser::is_op(Token token) {
+	static_assert(OP_TYPE_COUNT == 4, "Unhandled OP_TYPE_COUNT on get_op_type_by_token_type at parser.cpp");
+	switch (token.get_type()) {
+		case Token::Type::TOKEN_TYPE_ADD:
+		case Token::Type::TOKEN_TYPE_SUB:
+		case Token::Type::TOKEN_TYPE_MUL:
+		case Token::Type::TOKEN_TYPE_DIV:
+			return true;
+
+		default: return false;
+	}
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <map>
+#include <stack>
 #include "parser.hpp"
 #include "lexer.hpp"
 
@@ -44,11 +45,15 @@ public:
 	std::string compile_var_reasignation(Statement stmt, Shared_Info& si);
 	std::string compile_expr(Expr expr, Shared_Info& si);
 	std::string compile_func_call(Expr expr, Shared_Info& si);
+	void compile_op_tree(Expr expr, std::stack<Expr>& expr_stack, std::stack<OpType>& op_stack);
+	std::string compile_op(Expr expr, Shared_Info& si);
+	std::string compile_operation(OpType type);
 	std::string compile_boolean(Expr expr);
 	std::string compile_number(Expr expr);
 	std::string compile_string(Expr expr);
 	std::string compile_var_read(Expr expr, Shared_Info& si);
 	std::string compile_program();
 	std::string build_data_segment();
+	std::string build_bss_segment();
 	std::string compile_builtin();
 };
