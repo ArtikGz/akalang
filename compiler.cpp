@@ -95,8 +95,8 @@ std::string Compiler::compile_expr(Expr* expr, Shared_Info& si) {
 
 void Compiler::compile_op_tree(Expr* expr, std::stack<Expr*>& expr_stack, std::stack<OpType>& op_stack) {
 	if (expr->type == EXPR_TYPE_OP) {
-		compile_op_tree(expr->op->rhs, expr_stack, op_stack);
 		op_stack.push(expr->op->type);
+		compile_op_tree(expr->op->rhs, expr_stack, op_stack);
 		compile_op_tree(expr->op->lhs, expr_stack, op_stack);
 	} else {
 		expr_stack.push(expr);

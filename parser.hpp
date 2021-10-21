@@ -50,7 +50,6 @@ struct Op {
 	Expr* rhs;
 };
 
-
 struct Func_Arg {
 	VarType type;
 	std::string name;

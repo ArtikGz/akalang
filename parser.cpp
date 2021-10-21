@@ -237,16 +237,21 @@ Expr* Parser::parse_primary_expr(Token token) {
 }
 
 Expr* Parser::parse_expr_with_precedence(Token token, OpPrec prec) {
+	if (prec >= OP_PREC_COUNT) {
+		return parse_primary_expr(token);
+	}
+
 	Expr* expr = new Expr();
-	Expr* lhs = parse_primary_expr(token);
+	Expr* lhs = parse_expr_with_precedence(token, (OpPrec) (prec + 1));
+
 	token = lexer->explore_next_token();
-	if (is_op(token)) {
+	if (is_op(token) && get_prec_by_op_type(get_op_type_by_token_type(token)) == prec) {
 		lexer->next_token();
 		expr->type = EXPR_TYPE_OP;
 		Op* op = new Op();
 		op->type = get_op_type_by_token_type(token);
 		op->lhs = lhs;
-		op->rhs = parse_expr_with_precedence(lexer->next_token(), OP_PREC_0);
+		op->rhs = parse_expr_with_precedence(lexer->next_token(), prec);
 
 		expr->op = op;
 	} else {
