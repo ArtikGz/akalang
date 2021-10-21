@@ -20,18 +20,21 @@ std::string Compiler::compile_program() {
 std::string Compiler::compile_builtin() {
 	std::string builtin_functions;
 	std::vector<std::string> source_list {"print.asm", "len.asm", "println.asm", "input.asm", "socket.asm",
-	 "connect.asm", "printint.asm"};
+		"connect.asm", "printint.asm", "atoi.asm", "cleaninputbuf.asm", "rminputstrnl.asm"};
 	for (const std::string& source: source_list) {
 		builtin_functions += Utils::read_file(BUILTIN_PATH + source);
 	}
 
-	global_function_register["print"] = std::vector<VarType> {VAR_TYPE_STR}; // printm
-	global_function_register["len"] = std::vector<VarType> {VAR_TYPE_STR}; // lenm
-	global_function_register["println"] = std::vector<VarType> {VAR_TYPE_STR}; // printlnm
-	global_function_register["input"] = std::vector<VarType> {VAR_TYPE_STR}; // inputm
-	global_function_register["socket"] = std::vector<VarType> {VAR_TYPE_INT, VAR_TYPE_INT, VAR_TYPE_INT}; // socketm
-	global_function_register["connect"] = std::vector<VarType> {VAR_TYPE_INT}; // connectm
-	global_function_register["printint"] = std::vector<VarType> {VAR_TYPE_INT}; // printintm
+	global_function_register["print"] = std::vector<VarType> {VAR_TYPE_STR}; // print.asm
+	global_function_register["len"] = std::vector<VarType> {VAR_TYPE_STR}; // len.asm
+	global_function_register["println"] = std::vector<VarType> {VAR_TYPE_STR}; // println.asm
+	global_function_register["input"] = std::vector<VarType> {VAR_TYPE_STR}; // input.asm
+	global_function_register["socket"] = std::vector<VarType> {VAR_TYPE_INT, VAR_TYPE_INT, VAR_TYPE_INT}; // socket.asm
+	global_function_register["connect"] = std::vector<VarType> {VAR_TYPE_INT}; // connect.asm
+	global_function_register["printint"] = std::vector<VarType> {VAR_TYPE_INT}; // printint.asm
+	global_function_register["atoi"] = std::vector<VarType> {VAR_TYPE_STR}; // atoi.asm
+	global_function_register["cleaninputbuf"] = std::vector<VarType> {}; // cleaninputbuf.asm
+	global_function_register["rminputstrnl"] = std::vector<VarType> {}; // rminputstrnl.asm
 
 	return builtin_functions;
 }

@@ -6,10 +6,9 @@
 
 std::string Preprocessor::preprocess_includes(const std::string& filename) {
 	std::string preprocessed_includes;
-
 	std::vector<std::string> filenames;
-	std::cout << filename << std::endl;
-	Lexer lexer = Lexer(Utils::read_file(filename));
+
+	Lexer lexer = Lexer(filename);
 	Token token = lexer.next_token();
 	while (token.get_type() == Token::Type::TOKEN_TYPE_INCLUDE_DIRECTIVE) {
 		token = lexer.expect_next_token(Token::Type::TOKEN_TYPE_LITERAL_STRING, "Preprocessor error: expected filename after include directive");

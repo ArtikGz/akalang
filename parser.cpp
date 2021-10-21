@@ -57,7 +57,7 @@ std::vector<Func_Arg*> Parser::parse_fnc_arguments(Token name_token) {
 			break;
 		}
 		if (name_token.get_type() != Token::Type::TOKEN_TYPE_COMMA) {
-			Utils::error("Parsing error: expected COMMA as argument separator");
+			Utils::error("Parsing error: expected COMMA as argument separator on token: " + name_token.get_value());
 		}
 		name_token = lexer->expect_next_token(Token::Type::TOKEN_TYPE_NAME, "Parsing error: expected name after COMMA separator");
 	}
@@ -181,7 +181,7 @@ std::vector<Expr*> Parser::parse_func_call_args(Token token) {
 			break;
 		}
 		if (token.get_type() != Token::Type::TOKEN_TYPE_COMMA) {
-			Utils::error("Expected COMMA function as argument separator");
+			Utils::error("Expected COMMA function as argument separator, got " + token.get_value());
 		}
 		token = lexer->next_token();
 		func_call_args.push_back(parse_expr(token));
