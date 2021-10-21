@@ -24,7 +24,7 @@ const std::string BUILTIN_PATH = "./builtin/";
 
 class Compiler {
 private:
-	std::vector<Statement> instructions;
+	std::vector<Statement*> instructions;
 	// Global function register
 	std::map<std::string, std::vector<VarType>> global_function_register; 
 
@@ -37,21 +37,21 @@ private:
 	std::string get_return_reg_by_data_type(VarType data_type);
 
 public:
-	Compiler(std::vector<Statement> instructions);
-	std::string compile_statement(Statement stmt, Shared_Info& si);
-	std::string compile_function(Statement function);
-	std::string compile_return(Statement stmt, Shared_Info& si);
-	std::string compile_var(Statement stmt, Shared_Info& si);
-	std::string compile_var_reasignation(Statement stmt, Shared_Info& si);
-	std::string compile_expr(Expr expr, Shared_Info& si);
-	std::string compile_func_call(Expr expr, Shared_Info& si);
-	void compile_op_tree(Expr expr, std::stack<Expr>& expr_stack, std::stack<OpType>& op_stack);
-	std::string compile_op(Expr expr, Shared_Info& si);
+	Compiler(std::vector<Statement*> instructions);
+	std::string compile_statement(Statement* stmt, Shared_Info& si);
+	std::string compile_function(Statement* function);
+	std::string compile_return(Statement* stmt, Shared_Info& si);
+	std::string compile_var(Statement* stmt, Shared_Info& si);
+	std::string compile_var_reasignation(Statement* stmt, Shared_Info& si);
+	std::string compile_expr(Expr* expr, Shared_Info& si);
+	std::string compile_func_call(Expr* expr, Shared_Info& si);
+	void compile_op_tree(Expr* expr, std::stack<Expr*>& expr_stack, std::stack<OpType>& op_stack);
+	std::string compile_op(Expr* expr, Shared_Info& si);
 	std::string compile_operation(OpType type);
-	std::string compile_boolean(Expr expr);
-	std::string compile_number(Expr expr);
-	std::string compile_string(Expr expr);
-	std::string compile_var_read(Expr expr, Shared_Info& si);
+	std::string compile_boolean(Expr* expr);
+	std::string compile_number(Expr* expr);
+	std::string compile_string(Expr* expr);
+	std::string compile_var_read(Expr* expr, Shared_Info& si);
 	std::string compile_program();
 	std::string build_data_segment();
 	std::string build_bss_segment();

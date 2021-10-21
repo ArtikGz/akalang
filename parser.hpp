@@ -6,14 +6,12 @@
 #include "lexer.hpp"
 
 typedef struct Func_Arg Func_Arg;
-typedef struct ExprAs ExprAs;
 typedef struct Expr Expr;
 typedef struct Func_Def Func_Def;
 typedef struct Var_Asign Var_Asign;
 typedef struct Ret Ret;
-typedef struct StmtAs StmtAs;
-typedef struct Statement Statement;
 typedef struct Op Op;
+typedef struct Statement Statement;
 
 typedef enum {
 	VAR_TYPE_INT,
@@ -61,13 +59,13 @@ struct Func_Arg {
 struct Func_Def {
 	std::string name;
 	VarType return_type;
-	std::vector<Func_Arg> arguments;
-	std::vector<Statement> body;
+	std::vector<Func_Arg*> arguments;
+	std::vector<Statement*> body;
 };
 
 struct Func_Call {
 	std::string name;
-	std::vector<Expr> expr;
+	std::vector<Expr*> expr;
 };
 
 typedef enum {
@@ -80,41 +78,35 @@ typedef enum {
 	EXPR_TYPE_COUNTER
 } ExprType;
 
-struct ExprAs {
-	Func_Call func_call;
-	bool boolean;
-	int number;
-	std::string var_read;
-	std::string string;
-	Op op;
-};
 static_assert(EXPR_TYPE_COUNTER == 6, "Unhandled EXPR_TYPE_COUNTER on parser.hpp");
 
 struct Expr {
 	ExprType type;
-	ExprAs as;
+	Func_Call* func_call;
+	bool boolean;
+	int number;
+	std::string var_read;
+	std::string string;
+	Op* op;
 };
 
 struct Var_Asign {
 	std::string name;
 	VarType type;
-	Expr value;
+	Expr* value;
 };
 
 struct Ret {
-	Expr expr;
+	Expr* expr;
 };
 
-struct StmtAs {
-	Func_Def fnc;
-	Var_Asign var;
-	Expr expr;
-};
 static_assert(STMT_TYPE_COUNTER == 5, "Unhandled STMT_TYPE_COUNTER on parser.hpp");
 
 struct Statement {
 	StmtType type;
-	StmtAs as;
+	Func_Def* fnc;
+	Var_Asign* var;
+	Expr* expr;
 };
 
 class Parser {
@@ -124,20 +116,20 @@ private:
 
 public:
 	Parser(Lexer* lexer);
-	Statement parse_function();
-	std::vector<Statement> parse_block();
-	std::vector<Func_Arg> parse_fnc_arguments(Token name_token);
+	Statement* parse_function();
+	std::vector<Statement*> parse_block();
+	std::vector<Func_Arg*> parse_fnc_arguments(Token name_token);
 	VarType get_type_from_string(std::string val);
-	std::vector<Statement> parse_code();
-	Statement parse_name(Token token);
-	Statement parse_return();
-	Statement parse_var_reasignation(Token name);
-	Statement parse_var();
-	Func_Call parse_func_call(Token name);
-	std::vector<Expr> parse_func_call_args(Token token);
-	Expr parse_expr(Token token);
-	Expr parse_primary_expr(Token token);
-	Expr parse_expr_with_precedence(Token token, OpPrec prec);
+	std::vector<Statement*> parse_code();
+	Statement* parse_name(Token token);
+	Statement* parse_return();
+	Statement* parse_var_reasignation(Token name);
+	Statement* parse_var();
+	Func_Call* parse_func_call(Token name);
+	std::vector<Expr*> parse_func_call_args(Token token);
+	Expr* parse_expr(Token token);
+	Expr* parse_primary_expr(Token token);
+	Expr* parse_expr_with_precedence(Token token, OpPrec prec);
 	OpType get_op_type_by_token_type(Token token);
 	OpPrec get_prec_by_op_type(OpType op_type);
 	bool is_op(Token token);

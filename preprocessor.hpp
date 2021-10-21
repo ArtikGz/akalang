@@ -3,5 +3,5 @@
 
 class Preprocessor {
 public:
-	static std::string preprocess_includes(std::string filename);
+	static std::string preprocess_includes(const std::string& filename);
 };

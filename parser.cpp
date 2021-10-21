@@ -3,8 +3,8 @@
 #include "parser.hpp"
 
 Parser::Parser(Lexer* lexer) : tokens(lexer->get_tokens()), lexer(lexer) {}
-std::vector<Statement> Parser::parse_code() {
-	std::vector<Statement> fnc_vector;
+std::vector<Statement*> Parser::parse_code() {
+	std::vector<Statement*> fnc_vector;
 	while (!lexer->is_parsed()) {
 		lexer->next_token();
 		fnc_vector.push_back(parse_function());
@@ -13,12 +13,13 @@ std::vector<Statement> Parser::parse_code() {
 	return fnc_vector;
 }
 
-Statement Parser::parse_function() {
-	Statement stmt; 
-	stmt.type = STMT_TYPE_FUNCTION_DECLARATION;
+Statement* Parser::parse_function() {
+	Statement* stmt = new Statement(); 
+	stmt->fnc = new Func_Def();
+	stmt->type = STMT_TYPE_FUNCTION_DECLARATION;
 
 	Token token = lexer->expect_next_token(Token::Type::TOKEN_TYPE_NAME, "Parsing error: expected name after fnc keyword");
-	stmt.as.fnc.name = token.get_value();
+	stmt->fnc->name = token.get_value();
 
 	lexer->expect_next_token(Token::Type::TOKEN_TYPE_OPEN_PAREN, "Parsing error: expected open paren after function declaration");
 
@@ -28,27 +29,27 @@ Statement Parser::parse_function() {
 	}
 
 	if (token.get_type() == Token::Type::TOKEN_TYPE_NAME) {
-		stmt.as.fnc.arguments = parse_fnc_arguments(token);
+		stmt->fnc->arguments = parse_fnc_arguments(token);
 	} 
 
 	lexer->expect_next_token(Token::Type::TOKEN_TYPE_GREATER_THAN, "Parsing error: expected type after function arguments");
 	token = lexer->expect_next_token(Token::Type::TOKEN_TYPE_NAME, "Parsing error: untyped functions are not allowed");
-	stmt.as.fnc.return_type = get_type_from_string(token.get_value());
+	stmt->fnc->return_type = get_type_from_string(token.get_value());
 
 	lexer->expect_next_token(Token::Type::TOKEN_TYPE_OPEN_CURLY, "Parsing error: expected block after function declaration");
-	stmt.as.fnc.body = parse_block();
+	stmt->fnc->body = parse_block();
 
 	return stmt;
 }
 
-std::vector<Func_Arg> Parser::parse_fnc_arguments(Token name_token) {
-	std::vector<Func_Arg> function_arguments;
+std::vector<Func_Arg*> Parser::parse_fnc_arguments(Token name_token) {
+	std::vector<Func_Arg*> function_arguments;
 	while (true) {
-		Func_Arg argument;
-		argument.name = name_token.get_value();
+		Func_Arg* argument = new Func_Arg();
+		argument->name = name_token.get_value();
 		lexer->expect_next_token(Token::Type::TOKEN_TYPE_COLON, "Parsing error: untyped function params are not allowed");
 		Token token = lexer->expect_next_token(Token::Type::TOKEN_TYPE_NAME, "Parsing error: untyped function params are not allowed");
-		argument.type = get_type_from_string(token.get_value());
+		argument->type = get_type_from_string(token.get_value());
 		function_arguments.push_back(argument);
 
 		name_token = lexer->next_token();
@@ -79,9 +80,9 @@ VarType Parser::get_type_from_string(std::string val) {
 	}
 }
 
-std::vector<Statement> Parser::parse_block() {
+std::vector<Statement*> Parser::parse_block() {
 	bool unfinished_block = true;
-	std::vector<Statement> block;
+	std::vector<Statement*> block;
 	Token token = lexer->next_token();
 	while (unfinished_block) {
 		switch (token.get_type()) {
@@ -109,66 +110,69 @@ std::vector<Statement> Parser::parse_block() {
 	return block;
 }
 
-Statement Parser::parse_return() {
-	Statement ret;
-	ret.type = STMT_TYPE_RETURN;
-	ret.as.expr = parse_expr(lexer->next_token());
+Statement* Parser::parse_return() {
+	Statement* ret = new Statement();
+	ret->type = STMT_TYPE_RETURN;
+	ret->expr = parse_expr(lexer->next_token());
 	return ret;
 }
 
-Statement Parser::parse_var() {
-	Statement var;
-	var.type = STMT_TYPE_VAR_DECLARATION;
+Statement* Parser::parse_var() {
+	Statement* var = new Statement();
+	var->var = new Var_Asign();
+	var->type = STMT_TYPE_VAR_DECLARATION;
 	Token token = lexer->expect_next_token(Token::Type::TOKEN_TYPE_NAME, "Parsing error: expected name after var keyword");
-	var.as.var.name = token.get_value();
+	var->var->name = token.get_value();
 	lexer->expect_next_token(Token::Type::TOKEN_TYPE_COLON, "Parsing error: untyped variables are not allowed");
 	token = lexer->expect_next_token(Token::Type::TOKEN_TYPE_NAME, "Parsing error: untyped variables are not allowed");
-	var.as.var.type = get_type_from_string(token.get_value());
+	var->var->type = get_type_from_string(token.get_value());
 	lexer->expect_next_token(Token::Type::TOKEN_TYPE_EQUALS, "Parsing error: expected expresion after variable declaration");
-	var.as.var.value = parse_expr(lexer->next_token());
+	var->var->value = parse_expr(lexer->next_token());
 	return var;
 }
 
-Statement Parser::parse_name(Token token) {
+Statement* Parser::parse_name(Token token) {
 	Token ntoken = lexer->next_token();
 	switch (ntoken.get_type()) {
 		case Token::Type::TOKEN_TYPE_EQUALS: return parse_var_reasignation(token);
 		case Token::Type::TOKEN_TYPE_OPEN_PAREN: {
-			Statement stmt;
-			stmt.type = STMT_TYPE_EXPR;
-			stmt.as.expr.type = EXPR_TYPE_FUNC_CALL;
-			stmt.as.expr.as.func_call = parse_func_call(token);
+			Statement* stmt = new Statement();
+			stmt->expr = new Expr();
+			stmt->type = STMT_TYPE_EXPR;
+			stmt->expr->type = EXPR_TYPE_FUNC_CALL;
+			stmt->expr->func_call = parse_func_call(token);
 			return stmt;
 		}
 		default: Utils::error("Parsing error: couldn't parse expression");
 	}
 }
 
-Statement Parser::parse_var_reasignation(Token name) {
-	Statement stmt;
-	stmt.type = STMT_TYPE_VAR_REASIGNATION;
-	stmt.as.var.name = name.get_value();
-	stmt.as.var.value = parse_expr(lexer->next_token());
+Statement* Parser::parse_var_reasignation(Token name) {
+	Statement* stmt = new Statement();
+	stmt->var = new Var_Asign();
+	stmt->type = STMT_TYPE_VAR_REASIGNATION;
+	stmt->var->name = name.get_value();
+	stmt->var->value = parse_expr(lexer->next_token());
 	return stmt;
 }
 
-Func_Call Parser::parse_func_call(Token name) {
-	Func_Call func_call;
-	func_call.name = name.get_value();
+Func_Call* Parser::parse_func_call(Token name) {
+	Func_Call* func_call = new Func_Call();
+	func_call->name = name.get_value();
 
 	Token token = lexer->next_token();
 	if (token.get_type() != Token::Type::TOKEN_TYPE_CLOSE_PAREN 
 		&& token.get_type() == Token::Type::TOKEN_TYPE_NAME
 		|| token.get_type() == Token::Type::TOKEN_TYPE_LITERAL_NUMBER
 		|| token.get_type() == Token::Type::TOKEN_TYPE_LITERAL_STRING) {
-		func_call.expr = parse_func_call_args(token);
+		func_call->expr = parse_func_call_args(token);
 	}
 
 	return func_call;
 }
 
-std::vector<Expr> Parser::parse_func_call_args(Token token) {
-	std::vector<Expr> func_call_args;
+std::vector<Expr*> Parser::parse_func_call_args(Token token) {
+	std::vector<Expr*> func_call_args;
 	func_call_args.push_back(parse_expr(token));
 	while (true) {
 		token = lexer->next_token();
@@ -186,51 +190,45 @@ std::vector<Expr> Parser::parse_func_call_args(Token token) {
 	return func_call_args;
 }
 
-Expr Parser::parse_expr(Token token) {
+Expr* Parser::parse_expr(Token token) {
 	return parse_expr_with_precedence(token, OP_PREC_0);
 }
 
-Expr Parser::parse_primary_expr(Token token) {
+Expr* Parser::parse_primary_expr(Token token) {
 	static_assert(EXPR_TYPE_COUNTER == 6, "Unhandled EXPR_TYPE_FUNC_COUNT on parse_expr() on file parser.cpp");
+	Expr* expr = new Expr();
 	switch (token.get_type()) {
 		case Token::Type::TOKEN_TYPE_NAME:
 			if (token.get_value() == "true") {
-				Expr expr;
-				expr.type = EXPR_TYPE_LITERAL_BOOL;
-				expr.as.boolean = true;
+				expr->type = EXPR_TYPE_LITERAL_BOOL;
+				expr->boolean = true;
 				return expr;
 			} else if (token.get_value() == "false") {
-				Expr expr;
-				expr.type = EXPR_TYPE_LITERAL_BOOL;
-				expr.as.boolean = false;
+				expr->type = EXPR_TYPE_LITERAL_BOOL;
+				expr->boolean = false;
 				return expr;
 			} else {
 				Token ntoken = lexer->explore_next_token();
 				if (ntoken.get_type() == Token::Type::TOKEN_TYPE_OPEN_PAREN) {
 					lexer->next_token(); // skip TOKEN_TYPE_OPEN_PAREN
-					Expr expr;
-					expr.type = EXPR_TYPE_FUNC_CALL;
-					expr.as.func_call = parse_func_call(token);
+					expr->type = EXPR_TYPE_FUNC_CALL;
+					expr->func_call = parse_func_call(token);
 					return expr;
 				} else {
-					Expr expr;
-					expr.type = EXPR_TYPE_VAR_READ;
-					expr.as.var_read = token.get_value();
+					expr->type = EXPR_TYPE_VAR_READ;
+					expr->var_read = token.get_value();
 					return expr;
 				}
 			}
 		case Token::Type::TOKEN_TYPE_LITERAL_NUMBER: {
-			Expr expr;
-			expr.type = EXPR_TYPE_LITERAL_NUMBER;
-			expr.as.number = std::atoi(token.get_value().c_str());
+			expr->type = EXPR_TYPE_LITERAL_NUMBER;
+			expr->number = std::atoi(token.get_value().c_str());
 			return expr;
 		}
 
 		case Token::Type::TOKEN_TYPE_LITERAL_STRING: {
-			Expr expr;
-			expr.as.boolean = true; 
-			expr.type = EXPR_TYPE_LITERAL_STRING;
-			expr.as.string = token.get_value(); // TODO add string parse
+			expr->type = EXPR_TYPE_LITERAL_STRING;
+			expr->string = token.get_value(); // TODO add string parse
 			return expr;
 		}
 	}
@@ -238,23 +236,19 @@ Expr Parser::parse_primary_expr(Token token) {
 	Utils::error("Unexpected parsing expression: " + token.get_value());
 }
 
-Expr Parser::parse_expr_with_precedence(Token token, OpPrec prec) {
-	Expr expr;
-	Expr lhs = parse_primary_expr(token);
+Expr* Parser::parse_expr_with_precedence(Token token, OpPrec prec) {
+	Expr* expr = new Expr();
+	Expr* lhs = parse_primary_expr(token);
 	token = lexer->explore_next_token();
 	if (is_op(token)) {
 		lexer->next_token();
-		expr.type = EXPR_TYPE_OP;
-		Op op;
-		op.type = get_op_type_by_token_type(token);
+		expr->type = EXPR_TYPE_OP;
+		Op* op = new Op();
+		op->type = get_op_type_by_token_type(token);
+		op->lhs = lhs;
+		op->rhs = parse_expr_with_precedence(lexer->next_token(), OP_PREC_0);
 
-		op.lhs = new Expr();
-		memcpy(op.lhs, &lhs, sizeof(Expr));
-
-		Expr rhs = parse_expr_with_precedence(lexer->next_token(), OP_PREC_0);
-		op.rhs = new Expr();
-		memcpy(op.rhs, &rhs, sizeof(Expr));
-		expr.as.op = op;
+		expr->op = op;
 	} else {
 		expr = lhs;
 	}

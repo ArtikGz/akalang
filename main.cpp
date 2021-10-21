@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
 
 
 	Parser parser = Parser(&lex);
-	std::vector<Statement> statements = parser.parse_code();
+	std::vector<Statement*> statements = parser.parse_code();
 
 	Compiler compiler = Compiler(statements);
 	std::string program = compiler.compile_program();

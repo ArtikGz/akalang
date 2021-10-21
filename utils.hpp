@@ -3,6 +3,6 @@
 
 class Utils{
 public:
-	static std::string read_file(std::string filepath);
-	static void error(std::string message, ...);
+	static std::string read_file(const std::string& filepath);
+	static void error(const std::string& message, ...);
 };
