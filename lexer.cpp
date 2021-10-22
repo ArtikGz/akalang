@@ -80,6 +80,8 @@ Token Lexer::form_name(char c) {
 		return Token(Token::Type::TOKEN_TYPE_FOR, value);
 	} else if (value == "include") {
 		return Token(Token::Type::TOKEN_TYPE_INCLUDE_DIRECTIVE, value);
+	} else if (value == "else") {
+		return Token(Token::Type::TOKEN_TYPE_ELSE, value);
 	}
 
 	return Token(Token::Type::TOKEN_TYPE_NAME, value);
@@ -124,6 +126,10 @@ Token Lexer::explore_next_token() {
 	return this->tokens[index];
 }
 
+Token Lexer::explore_last_token() {
+	return this->tokens[index - 1];
+}
+
 bool Lexer::is_parsed() {
 	return this->tokens.size() <= index;
 }
@@ -147,4 +153,4 @@ Lexer Lexer::from_content(std::string content) {
 	return lexer;
 }
 
-static_assert(Token::Type::TOKEN_COUNTER == 25, "Unhandled TOKEN_COUNTER on lexer.cpp");
+static_assert(Token::Type::TOKEN_COUNTER == 26, "Unhandled TOKEN_COUNTER on lexer.cpp");

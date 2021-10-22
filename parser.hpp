@@ -10,6 +10,7 @@ typedef struct Expr Expr;
 typedef struct Func_Def Func_Def;
 typedef struct Var_Asign Var_Asign;
 typedef struct Ret Ret;
+typedef struct If If;
 typedef struct Op Op;
 typedef struct Statement Statement;
 
@@ -27,6 +28,7 @@ typedef enum {
 	STMT_TYPE_RETURN,
 	STMT_TYPE_EXPR,
 	STMT_TYPE_VAR_DECLARATION,
+	STMT_TYPE_IF,
 	STMT_TYPE_COUNTER
 } StmtType;
 
@@ -35,12 +37,15 @@ typedef enum {
 	OP_TYPE_SUB,
 	OP_TYPE_DIV,
 	OP_TYPE_MUL,
+	OP_TYPE_LT,
+	OP_TYPE_GT,
 	OP_TYPE_COUNT
 } OpType;
 
 typedef enum {
 	OP_PREC_0,
 	OP_PREC_1,
+	OP_PREC_2,
 	OP_PREC_COUNT
 } OpPrec;
 
@@ -99,13 +104,18 @@ struct Ret {
 	Expr* expr;
 };
 
-static_assert(STMT_TYPE_COUNTER == 5, "Unhandled STMT_TYPE_COUNTER on parser.hpp");
+struct If {
+	Expr* condition;
+	std::vector<Statement*> then;
+	std::vector<Statement*> elsse;
+};
 
 struct Statement {
 	StmtType type;
 	Func_Def* fnc;
 	Var_Asign* var;
 	Expr* expr;
+	If* iif;
 };
 
 class Parser {
@@ -120,8 +130,9 @@ public:
 	std::vector<Func_Arg*> parse_fnc_arguments(Token name_token);
 	VarType get_type_from_string(std::string val);
 	std::vector<Statement*> parse_code();
-	Statement* parse_name(Token token);
+	Statement* parse_name();
 	Statement* parse_return();
+	Statement* parse_if();
 	Statement* parse_var_reasignation(Token name);
 	Statement* parse_var();
 	Func_Call* parse_func_call(Token name);

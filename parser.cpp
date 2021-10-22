@@ -81,13 +81,14 @@ VarType Parser::get_type_from_string(std::string val) {
 }
 
 std::vector<Statement*> Parser::parse_block() {
+	static_assert(STMT_TYPE_COUNTER == 6, "Unhandled STMT_TYPE_COUNTER on parse_block() at parser.cpp");
 	bool unfinished_block = true;
 	std::vector<Statement*> block;
-	Token token = lexer->next_token();
 	while (unfinished_block) {
+		Token token = lexer->next_token();
 		switch (token.get_type()) {
 			case Token::Type::TOKEN_TYPE_NAME: 
-				block.push_back(parse_name(token)); // This can be FUNC_CALL or VAR_REASIGNATION 
+				block.push_back(parse_name()); // This can be FUNC_CALL or VAR_REASIGNATION 
 				break;
 			case Token::Type::TOKEN_TYPE_RETURN:
 				block.push_back(parse_return());
@@ -95,19 +96,46 @@ std::vector<Statement*> Parser::parse_block() {
 			case Token::Type::TOKEN_TYPE_VAR:
 				block.push_back(parse_var());
 				break;
+			case Token::Type::TOKEN_TYPE_IF:
+				block.push_back(parse_if());
+				continue;
 			case Token::Type::TOKEN_TYPE_CLOSE_CURLY: 
 				unfinished_block = false;
 				break;
-			default: Utils::error("Parsing error: couldn't parse expression");
+			default: Utils::error("Parsing error: couldn't parse expression " + token.get_value());
 		}
 
-		if (token.get_type() != Token::Type::TOKEN_TYPE_CLOSE_CURLY) {
-			lexer->expect_next_token(Token::Type::TOKEN_TYPE_SEMICOLON, "Parsing error: expected semicolon at the end of the instruction");
-			token = lexer->next_token();
+		if (unfinished_block) {
+			token = lexer->explore_next_token();
+			if (token.get_type() != Token::Type::TOKEN_TYPE_CLOSE_CURLY 
+				&& token.get_type() != Token::Type::TOKEN_TYPE_SEMICOLON) {
+				Utils::error("Parsing error: expected semicolon at the end of statement, but got " + token.get_value());
+			}
+			if (token.get_type() == Token::Type::TOKEN_TYPE_SEMICOLON) {
+				lexer->next_token();
+			}
 		}
 	}
 
 	return block;
+}
+
+
+Statement* Parser::parse_if() {
+	Statement* stmt = new Statement();
+	stmt->type = STMT_TYPE_IF;
+	stmt->iif = new If();
+	stmt->iif->condition = parse_expr(lexer->next_token());
+	lexer->expect_next_token(Token::Type::TOKEN_TYPE_OPEN_CURLY, "Parsing error: expected open curly after if condition, but got " + lexer->explore_last_token().get_value());
+	stmt->iif->then = parse_block();
+	Token token = lexer->explore_next_token();
+	if (token.get_type() == Token::Type::TOKEN_TYPE_ELSE) {
+		lexer->next_token();
+		lexer->expect_next_token(Token::Type::TOKEN_TYPE_OPEN_CURLY, "Parsing error: expected open curly after else statement");
+		stmt->iif->elsse = parse_block();
+	}
+
+	return stmt;
 }
 
 Statement* Parser::parse_return() {
@@ -131,7 +159,8 @@ Statement* Parser::parse_var() {
 	return var;
 }
 
-Statement* Parser::parse_name(Token token) {
+Statement* Parser::parse_name() {
+	Token token = lexer->explore_last_token();
 	Token ntoken = lexer->next_token();
 	switch (ntoken.get_type()) {
 		case Token::Type::TOKEN_TYPE_EQUALS: return parse_var_reasignation(token);
@@ -262,30 +291,39 @@ Expr* Parser::parse_expr_with_precedence(Token token, OpPrec prec) {
 }
 
 OpType Parser::get_op_type_by_token_type(Token token) {
-	static_assert(OP_TYPE_COUNT == 4, "Unhandled OP_TYPE_COUNT on get_op_type_by_token_type at parser.cpp");
+	static_assert(OP_TYPE_COUNT == 6, "Unhandled OP_TYPE_COUNT on get_op_type_by_token_type at parser.cpp");
 	switch (token.get_type()) {
 		case Token::Type::TOKEN_TYPE_ADD: return OP_TYPE_ADD;
 		case Token::Type::TOKEN_TYPE_SUB: return OP_TYPE_SUB;
 		case Token::Type::TOKEN_TYPE_MUL: return OP_TYPE_MUL;
 		case Token::Type::TOKEN_TYPE_DIV: return OP_TYPE_DIV;
+		case Token::Type::TOKEN_TYPE_LOWER_THAN: return OP_TYPE_LT;
+		case Token::Type::TOKEN_TYPE_GREATER_THAN: return OP_TYPE_GT;
 		default: Utils::error("Unknown token type: " + token.get_value());
 	}
 }
 
 OpPrec Parser::get_prec_by_op_type(OpType op_type) {
-	static_assert(OP_TYPE_COUNT == 4, "Unhandled OP_TYPE_COUNT on get_prec_by_op_type at parser.cpp");
+	static_assert(OP_TYPE_COUNT == 6, "Unhandled OP_TYPE_COUNT on get_prec_by_op_type at parser.cpp");
 	switch (op_type) {
-		case OP_TYPE_ADD: return OP_PREC_0;
-		case OP_TYPE_SUB: return OP_PREC_0;
-		case OP_TYPE_MUL: return OP_PREC_1;
-		case OP_TYPE_DIV: return OP_PREC_1;
+		case OP_TYPE_LT:
+		case OP_TYPE_GT:
+			return OP_PREC_0;
+		case OP_TYPE_ADD: 
+		case OP_TYPE_SUB:
+			return OP_PREC_1;
+		case OP_TYPE_MUL: 
+		case OP_TYPE_DIV: 
+			return OP_PREC_2;
 		default: Utils::error("Unknown operation type");
 	}
 }
 
 bool Parser::is_op(Token token) {
-	static_assert(OP_TYPE_COUNT == 4, "Unhandled OP_TYPE_COUNT on get_op_type_by_token_type at parser.cpp");
+	static_assert(OP_TYPE_COUNT == 6, "Unhandled OP_TYPE_COUNT on get_op_type_by_token_type at parser.cpp");
 	switch (token.get_type()) {
+		case Token::Type::TOKEN_TYPE_LOWER_THAN:
+		case Token::Type::TOKEN_TYPE_GREATER_THAN:
 		case Token::Type::TOKEN_TYPE_ADD:
 		case Token::Type::TOKEN_TYPE_SUB:
 		case Token::Type::TOKEN_TYPE_MUL:

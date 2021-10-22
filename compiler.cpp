@@ -73,14 +73,37 @@ std::string Compiler::compile_function(Statement* function) {
 }
 
 std::string Compiler::compile_statement(Statement* stmt, Shared_Info& si) {
-	static_assert(STMT_TYPE_COUNTER == 5, "Unhandled STMT_TYPE_COUNTER on compile_statement on compiler.cpp");
+	static_assert(STMT_TYPE_COUNTER == 6, "Unhandled STMT_TYPE_COUNTER on compile_statement on compiler.cpp");
 	switch (stmt->type) {
 		case STMT_TYPE_EXPR: return compile_expr(stmt->expr, si);
 		case STMT_TYPE_RETURN: return compile_return(stmt, si);
 		case STMT_TYPE_VAR_DECLARATION: return compile_var(stmt, si);
 		case STMT_TYPE_VAR_REASIGNATION: return compile_var_reasignation(stmt, si);
+		case STMT_TYPE_IF: return compile_if(stmt, si);
 		default: Utils::error("Unknown expression");
 	}
+}
+
+std::string Compiler::compile_if(Statement* stmt, Shared_Info& si) {
+	std::stringstream ss;
+	ss << compile_expr(stmt->iif->condition, si);
+	ss << "\tcmp eax, 0\n\tje .ELSE" << si.if_counter << "\n";
+	for (Statement* stmts: stmt->iif->then) {
+		ss << compile_statement(stmts, si);
+	}
+	ss << "\tjmp .ENDIF" << si.if_counter << "\n";
+
+	ss << ".ELSE" << si.if_counter << ":\n";
+	if (!stmt->iif->elsse.empty()) {
+		for (Statement* stmts: stmt->iif->elsse) {
+			ss << compile_statement(stmts, si);
+		}
+	}
+	ss << ".ENDIF" << si.if_counter++ << ":\n";
+
+	delete stmt;
+
+	return ss.str();
 }
 
 std::string Compiler::compile_expr(Expr* expr, Shared_Info& si) {
@@ -116,13 +139,8 @@ std::string Compiler::compile_op(Expr* expr, Shared_Info& si) {
 	expr_stack.pop();
 	ss << compile_expr(cexpr, si) << "\tmov ebx, eax\n";
 
-	cexpr = expr_stack.top();
-	expr_stack.pop();
-	ss << compile_expr(cexpr, si) << compile_operation(op_stack.top());
-	op_stack.pop();
-
 	while(!op_stack.empty()) {
-		expr = expr_stack.top();
+		cexpr = expr_stack.top();
 		expr_stack.pop();
 		ss << compile_expr(cexpr, si) << compile_operation(op_stack.top());
 		op_stack.pop();
@@ -133,6 +151,7 @@ std::string Compiler::compile_op(Expr* expr, Shared_Info& si) {
 }
 
 std::string Compiler::compile_operation(OpType type) {
+	static_assert(OP_TYPE_COUNT == 6, "Unhandled OP_TYPE_COUNT on compile_operation() at compiler.cpp");
 	switch (type) {
 		case OP_TYPE_ADD:
 			return "\tadd ebx, eax\n";
@@ -142,6 +161,11 @@ std::string Compiler::compile_operation(OpType type) {
 		// 	return "\tidiv rbx, rax\n";
 		case OP_TYPE_MUL:
 			return "\timul ebx, eax\n";
+		case OP_TYPE_LT:
+			return "\tcmp ebx, eax\n\tsetl ah\n\tmovzx ebx, ah\n";
+		case OP_TYPE_GT:
+			return "\tcmp ebx, eax\n\tsetg ah\n\tmovzx ebx, ah\n";
+
 		default: Utils::error("Unknown operation: " + type);
 	}
 }

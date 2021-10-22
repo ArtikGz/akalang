@@ -28,6 +28,7 @@ public:
 	Token expect_next_token(Token::Type token_type, std::string error_msg);
 	Token next_token();
 	Token explore_next_token();
+	Token explore_last_token();
 	bool is_parsed();
 	static Lexer from_content(std::string content);
 	Lexer(std::string filepath);
