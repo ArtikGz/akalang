@@ -29,6 +29,7 @@ typedef enum {
 	STMT_TYPE_EXPR,
 	STMT_TYPE_VAR_DECLARATION,
 	STMT_TYPE_IF,
+	STMT_TYPE_WHILE,
 	STMT_TYPE_COUNTER
 } StmtType;
 
@@ -110,12 +111,18 @@ struct If {
 	std::vector<Statement*> elsse;
 };
 
+struct While {
+	Expr* condition;
+	std::vector<Statement*> block;
+};
+
 struct Statement {
 	StmtType type;
 	Func_Def* fnc;
 	Var_Asign* var;
 	Expr* expr;
 	If* iif;
+	While* whilee;
 };
 
 class Parser {
@@ -133,6 +140,7 @@ public:
 	Statement* parse_name();
 	Statement* parse_return();
 	Statement* parse_if();
+	Statement* parse_while();
 	Statement* parse_var_reasignation(Token name);
 	Statement* parse_var();
 	Func_Call* parse_func_call(Token name);

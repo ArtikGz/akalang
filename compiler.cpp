@@ -43,6 +43,8 @@ std::string Compiler::compile_function(Statement* function) {
 	Shared_Info si;
 	std::stringstream body;
 	si.rbp_offset = 0;
+	si.if_counter = 0;
+	si.while_counter = 0;
 	if (function->fnc->arguments.size() > 6) {
 		Utils::error("No more than 6 arguments on functions are allowed.");
 	}
@@ -73,15 +75,30 @@ std::string Compiler::compile_function(Statement* function) {
 }
 
 std::string Compiler::compile_statement(Statement* stmt, Shared_Info& si) {
-	static_assert(STMT_TYPE_COUNTER == 6, "Unhandled STMT_TYPE_COUNTER on compile_statement on compiler.cpp");
+	static_assert(STMT_TYPE_COUNTER == 7, "Unhandled STMT_TYPE_COUNTER on compile_statement on compiler.cpp");
 	switch (stmt->type) {
 		case STMT_TYPE_EXPR: return compile_expr(stmt->expr, si);
 		case STMT_TYPE_RETURN: return compile_return(stmt, si);
 		case STMT_TYPE_VAR_DECLARATION: return compile_var(stmt, si);
 		case STMT_TYPE_VAR_REASIGNATION: return compile_var_reasignation(stmt, si);
 		case STMT_TYPE_IF: return compile_if(stmt, si);
+		case STMT_TYPE_WHILE: return compile_while(stmt, si);
 		default: Utils::error("Unknown expression");
 	}
+}
+
+std::string Compiler::compile_while(Statement* stmt, Shared_Info& si) {
+	std::stringstream ss;
+	ss << ".WHILE" << si.while_counter << ":\n";
+	ss << compile_expr(stmt->whilee->condition, si);
+	ss << "\tcmp eax, 0\n\tje .ENDWHILE" << si.while_counter << "\n";
+	for (Statement* stmts: stmt->whilee->block) {
+		ss << compile_statement(stmts, si);
+	}
+
+	ss << "\tjmp .WHILE" << si.while_counter << "\n";
+	ss << ".ENDWHILE" << si.while_counter++ << ":\n";
+	return ss.str();
 }
 
 std::string Compiler::compile_if(Statement* stmt, Shared_Info& si) {

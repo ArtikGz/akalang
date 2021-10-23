@@ -13,6 +13,7 @@ typedef struct {
 typedef struct {
 	int rbp_offset;
 	int if_counter;
+	int while_counter;
 	std::map<std::string, Var_Declared> var_declare;
 } Shared_Info;
 
@@ -45,6 +46,7 @@ public:
 	std::string compile_var(Statement* stmt, Shared_Info& si);
 	std::string compile_var_reasignation(Statement* stmt, Shared_Info& si);
 	std::string compile_if(Statement* stmt, Shared_Info& si);
+	std::string compile_while(Statement* stmt, Shared_Info& si);
 	std::string compile_expr(Expr* expr, Shared_Info& si);
 	std::string compile_func_call(Expr* expr, Shared_Info& si);
 	void compile_op_tree(Expr* expr, std::stack<Expr*>& expr_stack, std::stack<OpType>& op_stack);

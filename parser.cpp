@@ -81,7 +81,7 @@ VarType Parser::get_type_from_string(std::string val) {
 }
 
 std::vector<Statement*> Parser::parse_block() {
-	static_assert(STMT_TYPE_COUNTER == 6, "Unhandled STMT_TYPE_COUNTER on parse_block() at parser.cpp");
+	static_assert(STMT_TYPE_COUNTER == 7, "Unhandled STMT_TYPE_COUNTER on parse_block() at parser.cpp");
 	bool unfinished_block = true;
 	std::vector<Statement*> block;
 	while (unfinished_block) {
@@ -98,6 +98,9 @@ std::vector<Statement*> Parser::parse_block() {
 				break;
 			case Token::Type::TOKEN_TYPE_IF:
 				block.push_back(parse_if());
+				continue;
+			case Token::Type::TOKEN_TYPE_WHILE:
+				block.push_back(parse_while());
 				continue;
 			case Token::Type::TOKEN_TYPE_CLOSE_CURLY: 
 				unfinished_block = false;
@@ -120,6 +123,15 @@ std::vector<Statement*> Parser::parse_block() {
 	return block;
 }
 
+Statement* Parser::parse_while() {
+	Statement* stmt = new Statement();
+	stmt->type = STMT_TYPE_WHILE;
+	stmt->whilee = new While();
+	stmt->whilee->condition = parse_expr(lexer->next_token());
+	lexer->expect_next_token(Token::Type::TOKEN_TYPE_OPEN_CURLY, "Parsing error: expected open curly after if condition, but got " + lexer->explore_last_token().get_value());
+	stmt->whilee->block = parse_block();
+	return stmt;
+}
 
 Statement* Parser::parse_if() {
 	Statement* stmt = new Statement();

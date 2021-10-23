@@ -82,6 +82,8 @@ Token Lexer::form_name(char c) {
 		return Token(Token::Type::TOKEN_TYPE_INCLUDE_DIRECTIVE, value);
 	} else if (value == "else") {
 		return Token(Token::Type::TOKEN_TYPE_ELSE, value);
+	} else if (value == "while") {
+		return Token(Token::Type::TOKEN_TYPE_WHILE, value);
 	}
 
 	return Token(Token::Type::TOKEN_TYPE_NAME, value);
@@ -153,4 +155,4 @@ Lexer Lexer::from_content(std::string content) {
 	return lexer;
 }
 
-static_assert(Token::Type::TOKEN_COUNTER == 26, "Unhandled TOKEN_COUNTER on lexer.cpp");
+static_assert(Token::Type::TOKEN_COUNTER == 27, "Unhandled TOKEN_COUNTER on lexer.cpp");
