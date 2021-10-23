@@ -98,6 +98,7 @@ std::string Compiler::compile_while(Statement* stmt, Shared_Info& si) {
 
 	ss << "\tjmp .WHILE" << si.while_counter << "\n";
 	ss << ".ENDWHILE" << si.while_counter++ << ":\n";
+
 	return ss.str();
 }
 
@@ -117,8 +118,6 @@ std::string Compiler::compile_if(Statement* stmt, Shared_Info& si) {
 		}
 	}
 	ss << ".ENDIF" << si.if_counter++ << ":\n";
-
-	delete stmt;
 
 	return ss.str();
 }

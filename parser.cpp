@@ -84,6 +84,7 @@ std::vector<Statement*> Parser::parse_block() {
 	static_assert(STMT_TYPE_COUNTER == 7, "Unhandled STMT_TYPE_COUNTER on parse_block() at parser.cpp");
 	bool unfinished_block = true;
 	std::vector<Statement*> block;
+
 	while (unfinished_block) {
 		Token token = lexer->next_token();
 		switch (token.get_type()) {
@@ -98,7 +99,7 @@ std::vector<Statement*> Parser::parse_block() {
 				break;
 			case Token::Type::TOKEN_TYPE_IF:
 				block.push_back(parse_if());
-				continue;
+				continue; 
 			case Token::Type::TOKEN_TYPE_WHILE:
 				block.push_back(parse_while());
 				continue;
