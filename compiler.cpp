@@ -52,12 +52,13 @@ std::string Compiler::compile_function(Statement* function) {
 	std::vector<VarType> data_types;
 	int param_counter = 0;
 	for (Func_Arg* arg: function->fnc->arguments) {
-		inc_rbp_offset(si.rbp_offset, arg->type);
 		std::string reg = get_reg_by_data_type_and_counter(param_counter, arg->type);
 		std::string data_size = get_data_size_by_data_type(arg->type);
 		body << "\tmov " << data_size <<  " [rbp - " << si.rbp_offset << "], " << reg << "\n";
 		si.var_declare[arg->name] = {.rbp_offset = si.rbp_offset, .type = arg->type};
 		data_types.push_back(arg->type);
+		inc_rbp_offset(si.rbp_offset, arg->type);
+		param_counter++;
 	}
 	global_function_register[function->fnc->name] = data_types;
 
