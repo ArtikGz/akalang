@@ -16,7 +16,7 @@ $ ./main main.aka
 
 ## Examples
 ### Hello world
-```go
+```rust
 fnc main() > int {
 	println("Hello, world");
 	return 0;
@@ -25,14 +25,15 @@ fnc main() > int {
 
 ### Includes
 test.aka:
-```go
+```rust
 fnc test() > int {
 	println("Hello, world!");
+	return 0;
 }
 ```
 
 main.aka:
-```go
+```rust
 include "test.aka";
 
 fnc main() > int {
@@ -42,12 +43,65 @@ fnc main() > int {
 ```
 
 ### Variables
-```go
+```rust
 fnc main() > int {
 	var varname: str = "Hello, world";
 	println(varname); // Hello, world
 	varname = "Hello, world!!!";
 	println(varname); // Hello, world!!!
+	return 0;
+}
+```
+
+### While
+```rust
+fnc main() > int {
+	var i: int = 0;
+
+	while i < 5 {
+		printint(i);
+		i = i + 1;
+	}
+
+	println("end");
+}
+```
+
+### If
+```rust
+fnc test(num: int) > int {
+	if num + 5 > 10 {
+		println("Hello, world");
+	} else {
+		println("Bye, world");
+	}
+
+	return 0;
+}
+
+fnc main() > int {
+	test(5); // output: Bye, world
+	test(6); // output: Hello, world
+
+	return 0;
+}
+```
+
+### Fibonacci
+```rust
+fnc fib(n: int) > int {
+	if n < 2 {
+		return n;
+	}
+
+	var a: int = fib(n - 1);
+	var b: int = fib(n - 2);
+	return a + b;
+}
+
+fnc main() > int {
+	printint(fib(7)); // output: 13
+
 	return 0;
 }
 ```
