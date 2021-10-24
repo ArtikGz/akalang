@@ -105,3 +105,41 @@ fnc main() > int {
 	return 0;
 }
 ```
+
+### Prime numbers
+```rust
+fnc isPrime(n: int) > bool {
+	if n == 1 {
+		return false;
+	}
+	if n == 2 {
+		return false;
+	}
+
+	var counter: int = 0;
+	var i: int = 1;
+	while i < n {
+		if n % i == 0 {
+			counter = counter + 1;
+		}
+
+		i = i + 1;
+	}
+
+	return counter < 2;
+}
+
+fnc main() > int {
+	var n: int = 7;
+	var test: bool = isPrime(n);
+	if test {
+		printint(n);
+		println("is prime");
+	} else {
+		printint(n);
+		println("is not prime");
+	}
+
+	return 0;
+}
+```
