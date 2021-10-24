@@ -91,15 +91,16 @@ std::string Compiler::compile_statement(Statement* stmt, Shared_Info& si) {
 
 std::string Compiler::compile_while(Statement* stmt, Shared_Info& si) {
 	std::stringstream ss;
-	ss << ".WHILE" << si.while_counter << ":\n";
+	int actual_while = si.while_counter++;
+	ss << ".WHILE" << actual_while << ":\n";
 	ss << compile_expr(stmt->whilee->condition, si);
-	ss << "\tcmp eax, 0\n\tje .ENDWHILE" << si.while_counter << "\n";
+	ss << "\tcmp eax, 0\n\tje .ENDWHILE" << actual_while << "\n";
 	for (Statement* stmts: stmt->whilee->block) {
 		ss << compile_statement(stmts, si);
 	}
 
-	ss << "\tjmp .WHILE" << si.while_counter << "\n";
-	ss << ".ENDWHILE" << si.while_counter++ << ":\n";
+	ss << "\tjmp .WHILE" << actual_while << "\n";
+	ss << ".ENDWHILE" << actual_while << ":\n";
 
 	return ss.str();
 }
@@ -191,9 +192,11 @@ std::string Compiler::compile_operation(OpType type) {
 		 	return "\tmov ecx, eax\n"
 				   "\tmov eax, ebx\n"
 				   "\tmov ebx, ecx\n"
+				   "\tpush rdx\n"
 				   "\txor edx, edx\n"
 				   "\tidiv ebx\n"
-				   "\tmov ebx, edx\n";
+				   "\tmov ebx, edx\n"
+				   "\tpop rdx\n";
 
 		case OP_TYPE_MUL:
 			return "\timul ebx, eax\n";
