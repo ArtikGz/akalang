@@ -130,16 +130,13 @@ fnc isPrime(n: int) > bool {
 }
 
 fnc main() > int {
-	var n: int = 7;
-	var test: bool = isPrime(n);
-	if test {
-		printint(n);
+	var n: int = 101;
+	printint(n);
+	if isPrime(n) {
 		println("is prime");
 	} else {
-		printint(n);
 		println("is not prime");
 	}
-
 	return 0;
 }
 ```
