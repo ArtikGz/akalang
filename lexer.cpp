@@ -14,11 +14,12 @@ Token Lexer::get_next_token() {
 		case ';': return Token(Token::Type::TOKEN_TYPE_SEMICOLON, c);
 		case ':': return Token(Token::Type::TOKEN_TYPE_COLON, c);
 		case ',': return Token(Token::Type::TOKEN_TYPE_COMMA, c);
-		case '=': return Token(Token::Type::TOKEN_TYPE_EQUALS, c);
+		case '=': return form_equals(c);
 		case '-': return Token(Token::Type::TOKEN_TYPE_SUB, c);
 		case '+': return Token(Token::Type::TOKEN_TYPE_ADD, c);
 		case '/': return Token(Token::Type::TOKEN_TYPE_DIV, c);
 		case '*': return Token(Token::Type::TOKEN_TYPE_MUL, c);
+		case '%': return Token(Token::Type::TOKEN_TYPE_MOD, c);
 		case '"': return form_string(c);
 		case ' ':
 		case '\n':
@@ -100,6 +101,16 @@ Token Lexer::form_number(char c) {
 	return Token(Token::Type::TOKEN_TYPE_LITERAL_NUMBER, value);
 }
 
+Token Lexer::form_equals(char c) {
+	char nchar = file_content[index];
+	if (nchar == '=') {
+		index++;
+		return Token(Token::Type::TOKEN_TYPE_EQUALS_COMPARE, std::string(1, c) + nchar);
+	}
+
+	return Token(Token::Type::TOKEN_TYPE_EQUALS, c);
+}
+
 Token Lexer::form_string(char c) {
 	std::string value;
 
@@ -155,4 +166,4 @@ Lexer Lexer::from_content(std::string content) {
 	return lexer;
 }
 
-static_assert(Token::Type::TOKEN_COUNTER == 27, "Unhandled TOKEN_COUNTER on lexer.cpp");
+static_assert(Token::Type::TOKEN_COUNTER == 29, "Unhandled TOKEN_COUNTER on lexer.cpp");

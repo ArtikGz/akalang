@@ -20,7 +20,7 @@ std::string Compiler::compile_program() {
 std::string Compiler::compile_builtin() {
 	std::string builtin_functions;
 	std::vector<std::string> source_list {"print.asm", "len.asm", "println.asm", "input.asm", "socket.asm",
-		"connect.asm", "printint.asm", "atoi.asm", "cleaninputbuf.asm", "rminputstrnl.asm"};
+		"connect.asm", "printint.asm", "atoi.asm", "cleaninputbuf.asm", "rminputstrnl.asm", "printbool.asm"};
 	for (const std::string& source: source_list) {
 		builtin_functions += Utils::read_file(BUILTIN_PATH + source);
 	}
@@ -35,6 +35,7 @@ std::string Compiler::compile_builtin() {
 	global_function_register["atoi"] = std::vector<VarType> {VAR_TYPE_STR}; // atoi.asm
 	global_function_register["cleaninputbuf"] = std::vector<VarType> {}; // cleaninputbuf.asm
 	global_function_register["rminputstrnl"] = std::vector<VarType> {}; // rminputstrnl.asm
+	global_function_register["printbool"] = std::vector<VarType> {VAR_TYPE_BOOL}; // printbool.asm
 
 	return builtin_functions;
 }
@@ -52,12 +53,12 @@ std::string Compiler::compile_function(Statement* function) {
 	std::vector<VarType> data_types;
 	int param_counter = 0;
 	for (Func_Arg* arg: function->fnc->arguments) {
+		inc_rbp_offset(si.rbp_offset, arg->type);
 		std::string reg = get_reg_by_data_type_and_counter(param_counter, arg->type);
 		std::string data_size = get_data_size_by_data_type(arg->type);
 		body << "\tmov " << data_size <<  " [rbp - " << si.rbp_offset << "], " << reg << "\n";
 		si.var_declare[arg->name] = {.rbp_offset = si.rbp_offset, .type = arg->type};
 		data_types.push_back(arg->type);
-		inc_rbp_offset(si.rbp_offset, arg->type);
 		param_counter++;
 	}
 	global_function_register[function->fnc->name] = data_types;
@@ -168,20 +169,49 @@ std::string Compiler::compile_op(Expr* expr, Shared_Info& si) {
 }
 
 std::string Compiler::compile_operation(OpType type) {
-	static_assert(OP_TYPE_COUNT == 6, "Unhandled OP_TYPE_COUNT on compile_operation() at compiler.cpp");
+	static_assert(OP_TYPE_COUNT == 8, "Unhandled OP_TYPE_COUNT on compile_operation() at compiler.cpp");
 	switch (type) {
 		case OP_TYPE_ADD:
 			return "\tadd ebx, eax\n";
+
 		case OP_TYPE_SUB:
 			return "\tsub ebx, eax\n";
-		// case OP_TYPE_DIV: TODO
-		// 	return "\tidiv rbx, rax\n";
+
+		case OP_TYPE_DIV: 
+		 	return "\tmov ecx, eax\n"
+				   "\tmov eax, ebx\n"
+				   "\tmov ebx, ecx\n"
+				   "\tpush rdx\n"
+				   "\txor edx, edx\n"
+				   "\tidiv ebx\n"
+				   "\tmov ebx, eax\n"
+				   "\tpop rdx\n";
+	 
+		case OP_TYPE_MOD: 
+		 	return "\tmov ecx, eax\n"
+				   "\tmov eax, ebx\n"
+				   "\tmov ebx, ecx\n"
+				   "\txor edx, edx\n"
+				   "\tidiv ebx\n"
+				   "\tmov ebx, edx\n";
+
 		case OP_TYPE_MUL:
 			return "\timul ebx, eax\n";
+
 		case OP_TYPE_LT:
-			return "\tcmp ebx, eax\n\tsetl ah\n\tmovzx ebx, ah\n";
+			return "\tcmp ebx, eax\n"
+				   "\tsetl ah\n"
+				   "\tmovzx ebx, ah\n";
+
 		case OP_TYPE_GT:
-			return "\tcmp ebx, eax\n\tsetg ah\n\tmovzx ebx, ah\n";
+			return "\tcmp ebx, eax\n"
+				   "\tsetg ah\n"
+				   "\tmovzx ebx, ah\n";
+
+		case OP_TYPE_EQ:
+			return "\tcmp ebx, eax\n"
+				   "\tsete ah\n"
+				   "\tmovzx ebx, ah\n";
 
 		default: Utils::error("Unknown operation: " + type);
 	}
@@ -226,9 +256,9 @@ std::string Compiler::compile_var_read(Expr* expr, Shared_Info& si) {
 std::string Compiler::compile_boolean(Expr* expr) {
 	std::string compiled_boolean;
 	if (expr->boolean) {
-		compiled_boolean = "\tmov ah, 1\n";
+		compiled_boolean = "\tmov eax, 1\n";
 	} else {
-		compiled_boolean = "\tmov ah, 0\n";
+		compiled_boolean = "\tmov eax, 0\n";
 	}
 
 	return compiled_boolean;
@@ -332,7 +362,7 @@ void Compiler::inc_rbp_offset(int& rbp_offset, VarType data_type) {
 		case VAR_TYPE_LONG: rbp_offset += 8; break;
 		case VAR_TYPE_STR: rbp_offset += 8; break;
 		case VAR_TYPE_INT: rbp_offset += 4; break;
-		case VAR_TYPE_BOOL: rbp_offset += 1; break;
+		case VAR_TYPE_BOOL: rbp_offset += 4; break;
 		default: Utils::error("Unknown datatype");
 	}
 }
@@ -343,7 +373,7 @@ std::string Compiler::get_reg_by_data_type_and_counter(int& counter, VarType dat
 		case VAR_TYPE_LONG: return x64regs[counter];
 		case VAR_TYPE_STR: return x64regs[counter];
 		case VAR_TYPE_INT: return x32regs[counter];
-		case VAR_TYPE_BOOL: return x8regs[counter];
+		case VAR_TYPE_BOOL: return x32regs[counter];
 		default: Utils::error("Unknown datatype");
 	}
 }
@@ -354,7 +384,7 @@ std::string Compiler::get_return_reg_by_data_type(VarType data_type) {
 		case VAR_TYPE_LONG: return "rax";
 		case VAR_TYPE_STR: return "rax";
 		case VAR_TYPE_INT: return "eax";
-		case VAR_TYPE_BOOL: return "ah";
+		case VAR_TYPE_BOOL: return "eax";
 		default: Utils::error("Unknown datatype");
 	}
 }
@@ -365,8 +395,8 @@ std::string Compiler::get_data_size_by_data_type(VarType data_type) {
 		case VAR_TYPE_LONG: return "qword";
 		case VAR_TYPE_STR: return "qword";
 		case VAR_TYPE_INT: return "dword";
-		case VAR_TYPE_BOOL: return "byte";
-		default: Utils::error("Unknown datatype");
+		case VAR_TYPE_BOOL: return "dword";
+		default: Utils::error("Unknown datatype"); 
 	}
 }
 
@@ -378,6 +408,8 @@ std::string Compiler::build_data_segment() {
 		compiled_data_segment << "\tV" << c++ << " db " << str;
 	}
 	compiled_data_segment << "\tln db 0x0A\n";
+	compiled_data_segment << "\ttext_true db \"true\", 0x00\n";
+	compiled_data_segment << "\ttext_false db \"false\", 0x00\n";
 
 	return compiled_data_segment.str();
 }

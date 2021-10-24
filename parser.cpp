@@ -304,43 +304,49 @@ Expr* Parser::parse_expr_with_precedence(Token token, OpPrec prec) {
 }
 
 OpType Parser::get_op_type_by_token_type(Token token) {
-	static_assert(OP_TYPE_COUNT == 6, "Unhandled OP_TYPE_COUNT on get_op_type_by_token_type at parser.cpp");
+	static_assert(OP_TYPE_COUNT == 8, "Unhandled OP_TYPE_COUNT on get_op_type_by_token_type at parser.cpp");
 	switch (token.get_type()) {
 		case Token::Type::TOKEN_TYPE_ADD: return OP_TYPE_ADD;
 		case Token::Type::TOKEN_TYPE_SUB: return OP_TYPE_SUB;
 		case Token::Type::TOKEN_TYPE_MUL: return OP_TYPE_MUL;
 		case Token::Type::TOKEN_TYPE_DIV: return OP_TYPE_DIV;
+		case Token::Type::TOKEN_TYPE_MOD: return OP_TYPE_MOD;
 		case Token::Type::TOKEN_TYPE_LOWER_THAN: return OP_TYPE_LT;
 		case Token::Type::TOKEN_TYPE_GREATER_THAN: return OP_TYPE_GT;
+		case Token::Type::TOKEN_TYPE_EQUALS_COMPARE: return OP_TYPE_EQ;
 		default: Utils::error("Unknown token type: " + token.get_value());
 	}
 }
 
 OpPrec Parser::get_prec_by_op_type(OpType op_type) {
-	static_assert(OP_TYPE_COUNT == 6, "Unhandled OP_TYPE_COUNT on get_prec_by_op_type at parser.cpp");
+	static_assert(OP_TYPE_COUNT == 8, "Unhandled OP_TYPE_COUNT on get_prec_by_op_type at parser.cpp");
 	switch (op_type) {
 		case OP_TYPE_LT:
 		case OP_TYPE_GT:
+		case OP_TYPE_EQ:
 			return OP_PREC_0;
 		case OP_TYPE_ADD: 
 		case OP_TYPE_SUB:
 			return OP_PREC_1;
 		case OP_TYPE_MUL: 
 		case OP_TYPE_DIV: 
+		case OP_TYPE_MOD:
 			return OP_PREC_2;
 		default: Utils::error("Unknown operation type");
 	}
 }
 
 bool Parser::is_op(Token token) {
-	static_assert(OP_TYPE_COUNT == 6, "Unhandled OP_TYPE_COUNT on get_op_type_by_token_type at parser.cpp");
+	static_assert(OP_TYPE_COUNT == 8, "Unhandled OP_TYPE_COUNT on get_op_type_by_token_type at parser.cpp");
 	switch (token.get_type()) {
 		case Token::Type::TOKEN_TYPE_LOWER_THAN:
 		case Token::Type::TOKEN_TYPE_GREATER_THAN:
+		case Token::Type::TOKEN_TYPE_EQUALS_COMPARE:
 		case Token::Type::TOKEN_TYPE_ADD:
 		case Token::Type::TOKEN_TYPE_SUB:
 		case Token::Type::TOKEN_TYPE_MUL:
 		case Token::Type::TOKEN_TYPE_DIV:
+		case Token::Type::TOKEN_TYPE_MOD:
 			return true;
 
 		default: return false;

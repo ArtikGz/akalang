@@ -19,6 +19,7 @@ private:
 	Token form_name(char c);
 	Token form_number(char c);
 	Token form_string(char c);
+	Token form_equals(char c);
 
 public:
 	void set_file_content(std::string file_content);

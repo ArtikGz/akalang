@@ -37,9 +37,11 @@ typedef enum {
 	OP_TYPE_ADD,
 	OP_TYPE_SUB,
 	OP_TYPE_DIV,
+	OP_TYPE_MOD,
 	OP_TYPE_MUL,
 	OP_TYPE_LT,
 	OP_TYPE_GT,
+	OP_TYPE_EQ,
 	OP_TYPE_COUNT
 } OpType;
 

@@ -5,5 +5,5 @@ cleaninputbuf:
 	je .end
 	mov qword [rax+rbx], 0
 	inc rbx
-	.end:
+.end:
 	ret
