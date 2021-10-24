@@ -133,9 +133,9 @@ fnc main() > int {
 	var n: int = 101;
 	printint(n);
 	if isPrime(n) {
-		println("is prime");
+		println(" is prime");
 	} else {
-		println("is not prime");
+		println(" is not prime");
 	}
 	return 0;
 }
