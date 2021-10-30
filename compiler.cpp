@@ -141,8 +141,8 @@ std::string Compiler::compile_expr(Expr* expr, Shared_Info& si) {
 void Compiler::compile_op_tree(Expr* expr, std::stack<Expr*>& expr_stack, std::stack<OpType>& op_stack) {
 	if (expr->type == EXPR_TYPE_OP) {
 		op_stack.push(expr->op->type);
-		compile_op_tree(expr->op->rhs, expr_stack, op_stack);
 		compile_op_tree(expr->op->lhs, expr_stack, op_stack);
+		compile_op_tree(expr->op->rhs, expr_stack, op_stack);
 	} else {
 		expr_stack.push(expr);
 	}
@@ -176,7 +176,8 @@ std::string Compiler::compile_operation(OpType type) {
 			return "\tadd ebx, eax\n";
 
 		case OP_TYPE_SUB:
-			return "\tsub ebx, eax\n";
+			return "\tsub eax, ebx\n"
+				   "\tmov ebx, eax\n";
 
 		case OP_TYPE_DIV: 
 		 	return "\tmov ecx, eax\n"
@@ -199,15 +200,16 @@ std::string Compiler::compile_operation(OpType type) {
 				   "\tpop rdx\n";
 
 		case OP_TYPE_MUL:
-			return "\timul ebx, eax\n";
+			return "\timul eax, ebx\n"
+				   "\tmov ebx, eax\n";
 
 		case OP_TYPE_LT:
-			return "\tcmp ebx, eax\n"
+			return "\tcmp eax, ebx\n"
 				   "\tsetl ah\n"
 				   "\tmovzx ebx, ah\n";
 
 		case OP_TYPE_GT:
-			return "\tcmp ebx, eax\n"
+			return "\tcmp eax, ebx\n"
 				   "\tsetg ah\n"
 				   "\tmovzx ebx, ah\n";
 
