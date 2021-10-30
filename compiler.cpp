@@ -180,21 +180,18 @@ std::string Compiler::compile_operation(OpType type) {
 				   "\tmov ebx, eax\n";
 
 		case OP_TYPE_DIV: 
-		 	return "\tmov ecx, eax\n"
-				   "\tmov eax, ebx\n"
-				   "\tmov ebx, ecx\n"
-				   "\tpush rdx\n"
-				   "\txor edx, edx\n"
+		 	return "\tpush edx\n"
+			 	   "\txor edx, edx\n"
 				   "\tidiv ebx\n"
 				   "\tmov ebx, eax\n"
-				   "\tpop rdx\n";
+				   "\tpop edx\n";
 	 
 		case OP_TYPE_MOD: 
 		 	return "\tmov ecx, eax\n"
 				   "\tmov eax, ebx\n"
 				   "\tmov ebx, ecx\n"
 				   "\tpush rdx\n"
-				   "\txor edx, edx\n"
+				   "\txor rdx, rdx\n"
 				   "\tidiv ebx\n"
 				   "\tmov ebx, edx\n"
 				   "\tpop rdx\n";
