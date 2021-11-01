@@ -1,5 +1,5 @@
 # Aka Lang
-The version 2 of the akali-lang, another project for learning about compiler development.<br/>
+This project is for learning about compiler development.<br/>
 Only avaliable for x64 Linux.
 
 ## Build
