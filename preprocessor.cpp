@@ -10,8 +10,8 @@ std::string Preprocessor::preprocess_includes(const std::string& filename) {
 
 	Lexer lexer = Lexer(filename);
 	Token token = lexer.next_token();
-	while (token.get_type() == Token::Type::TOKEN_TYPE_INCLUDE_DIRECTIVE) {
-		token = lexer.expect_next_token(Token::Type::TOKEN_TYPE_LITERAL_STRING, "Preprocessor error: expected filename after include directive");
+	while (token.get_type() == Token::Type::INCLUDE_DIRECTIVE) {
+		token = lexer.expect_next_token(Token::Type::LITERAL_STRING, "Preprocessor error: expected filename after include directive");
 		// Avoid importing two times the same file
 		for (const std::string& file: filenames) {
 			if (file == token.get_value()) {
@@ -19,7 +19,7 @@ std::string Preprocessor::preprocess_includes(const std::string& filename) {
 			}
 		}
 
-		lexer.expect_next_token(Token::Type::TOKEN_TYPE_SEMICOLON, "Preprocessor error: expected semicolon at the end of include directive");
+		lexer.expect_next_token(Token::Type::SEMICOLON, "Preprocessor error: expected semicolon at the end of include directive");
 		filenames.push_back(token.get_value());
 
 		// Remove include directive from file

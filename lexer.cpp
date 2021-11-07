@@ -3,23 +3,23 @@
 Token Lexer::get_next_token() {
 	char c = file_content[index++];
 	switch (c) {
-		case '(': return Token(Token::Type::TOKEN_TYPE_OPEN_PAREN, c);
-		case ')': return Token(Token::Type::TOKEN_TYPE_CLOSE_PAREN, c);
-		case '[': return Token(Token::Type::TOKEN_TYPE_OPEN_BRACKET, c);
-		case ']': return Token(Token::Type::TOKEN_TYPE_CLOSE_BRACKET, c);
-		case '{': return Token(Token::Type::TOKEN_TYPE_OPEN_CURLY, c);
-		case '}': return Token(Token::Type::TOKEN_TYPE_CLOSE_CURLY, c);
-		case '>': return Token(Token::Type::TOKEN_TYPE_GREATER_THAN, c);
-		case '<': return Token(Token::Type::TOKEN_TYPE_LOWER_THAN, c);
-		case ';': return Token(Token::Type::TOKEN_TYPE_SEMICOLON, c);
-		case ':': return Token(Token::Type::TOKEN_TYPE_COLON, c);
-		case ',': return Token(Token::Type::TOKEN_TYPE_COMMA, c);
+		case '(': return Token(Token::Type::OPEN_PAREN, c);
+		case ')': return Token(Token::Type::CLOSE_PAREN, c);
+		case '[': return Token(Token::Type::OPEN_BRACKET, c);
+		case ']': return Token(Token::Type::CLOSE_BRACKET, c);
+		case '{': return Token(Token::Type::OPEN_CURLY, c);
+		case '}': return Token(Token::Type::CLOSE_CURLY, c);
+		case '>': return Token(Token::Type::GREATER_THAN, c);
+		case '<': return Token(Token::Type::LOWER_THAN, c);
+		case ';': return Token(Token::Type::SEMICOLON, c);
+		case ':': return Token(Token::Type::COLON, c);
+		case ',': return Token(Token::Type::COMMA, c);
 		case '=': return form_equals(c);
-		case '-': return Token(Token::Type::TOKEN_TYPE_SUB, c);
-		case '+': return Token(Token::Type::TOKEN_TYPE_ADD, c);
-		case '/': return Token(Token::Type::TOKEN_TYPE_DIV, c);
-		case '*': return Token(Token::Type::TOKEN_TYPE_MUL, c);
-		case '%': return Token(Token::Type::TOKEN_TYPE_MOD, c);
+		case '-': return Token(Token::Type::SUB, c);
+		case '+': return Token(Token::Type::ADD, c);
+		case '/': return Token(Token::Type::DIV, c);
+		case '*': return Token(Token::Type::MUL, c);
+		case '%': return Token(Token::Type::MOD, c);
 		case '"': return form_string(c);
 		case ' ':
 		case '\n':
@@ -70,24 +70,24 @@ Token Lexer::form_name(char c) {
 	index--;
 
 	if (value == "fnc") {
-		return Token(Token::Type::TOKEN_TYPE_FUNCTION, value);
+		return Token(Token::Type::FUNCTION, value);
 	} else if (value == "return") {
-		return Token(Token::Type::TOKEN_TYPE_RETURN, value);
+		return Token(Token::Type::RETURN, value);
 	} else if (value == "var") {
-		return Token(Token::Type::TOKEN_TYPE_VAR, value);
+		return Token(Token::Type::VAR, value);
 	} else if (value == "if") {
-		return Token(Token::Type::TOKEN_TYPE_IF, value);
+		return Token(Token::Type::IF, value);
 	} else if (value == "for") {
-		return Token(Token::Type::TOKEN_TYPE_FOR, value);
+		return Token(Token::Type::FOR, value);
 	} else if (value == "include") {
-		return Token(Token::Type::TOKEN_TYPE_INCLUDE_DIRECTIVE, value);
+		return Token(Token::Type::INCLUDE_DIRECTIVE, value);
 	} else if (value == "else") {
-		return Token(Token::Type::TOKEN_TYPE_ELSE, value);
+		return Token(Token::Type::ELSE, value);
 	} else if (value == "while") {
-		return Token(Token::Type::TOKEN_TYPE_WHILE, value);
+		return Token(Token::Type::WHILE, value);
 	}
 
-	return Token(Token::Type::TOKEN_TYPE_NAME, value);
+	return Token(Token::Type::NAME, value);
 }
 
 Token Lexer::form_number(char c) {
@@ -98,17 +98,17 @@ Token Lexer::form_number(char c) {
 	}
 	index--;
 
-	return Token(Token::Type::TOKEN_TYPE_LITERAL_NUMBER, value);
+	return Token(Token::Type::LITERAL_NUMBER, value);
 }
 
 Token Lexer::form_equals(char c) {
 	char nchar = file_content[index];
 	if (nchar == '=') {
 		index++;
-		return Token(Token::Type::TOKEN_TYPE_EQUALS_COMPARE, std::string(1, c) + nchar);
+		return Token(Token::Type::EQUALS_COMPARE, std::string(1, c) + nchar);
 	}
 
-	return Token(Token::Type::TOKEN_TYPE_EQUALS, c);
+	return Token(Token::Type::EQUALS, c);
 }
 
 Token Lexer::form_string(char c) {
@@ -120,7 +120,7 @@ Token Lexer::form_string(char c) {
 		c = file_content[index++];
 	} while (c != '"');
 
-	return Token(Token::Type::TOKEN_TYPE_LITERAL_STRING, value);
+	return Token(Token::Type::LITERAL_STRING, value);
 }
 
 Token Lexer::expect_next_token(Token::Type token_type, std::string error_msg) {
