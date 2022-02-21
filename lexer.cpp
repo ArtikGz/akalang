@@ -166,4 +166,4 @@ Lexer Lexer::from_content(std::string content) {
 	return lexer;
 }
 
-static_assert(Token::Type::TOKEN_COUNTER == 29, "Unhandled TOKEN_COUNTER on lexer.cpp");
+static_assert(Token::Type::TOKEN_COUNTER == 30, "Unhandled TOKEN_COUNTER on lexer.cpp");

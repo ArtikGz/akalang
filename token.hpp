@@ -4,6 +4,7 @@
 class Token {
 public:
 	enum Type {
+		UNKNOWN,
 		OPEN_PAREN,
 		CLOSE_PAREN,
 		OPEN_BRACKET,
