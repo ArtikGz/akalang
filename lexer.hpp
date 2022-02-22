@@ -3,9 +3,11 @@
 #include <vector>
 #include "utils.hpp"
 #include "token.hpp"
+#include "trie.hpp"
 
 class Lexer {
 private:
+	Trie trie;
 	std::string file_content;
 	std::vector<Token> tokens;
 	long index;
@@ -15,11 +17,11 @@ private:
 	void tokenize();
 	bool is_number(char c);
 	bool is_letter(char c);
-	bool is_num(char c);
-	Token form_name(char c);
-	Token form_number(char c);
-	Token form_string(char c);
-	Token form_equals(char c);
+	std::string form_name();
+	std::string form_number();
+	std::string form_string();
+	void register_keywords();
+	void skip_whitespace();
 
 public:
 	void set_file_content(std::string file_content);

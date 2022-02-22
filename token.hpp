@@ -38,6 +38,7 @@ public:
 	};
 	Token(Type type, char c);
 	Token(Type type, std::string c);
+	Token();
 
 private:
 	Type type;

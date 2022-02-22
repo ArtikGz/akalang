@@ -13,11 +13,18 @@ int main(int argc, char** argv) {
 	}
 
 	std::string filename = argv[1];
+	/*
+	std::cout << "Preprocessing" << std::endl;
 	std::string preprocessed_file = Preprocessor::preprocess_includes(filename);
-	Lexer lex = Lexer::from_content(preprocessed_file);
-	std::cout << lex.get_file_content() << std::endl;
+	*/
+	std::cout << "Lexing" << std::endl;
+	Lexer lex = Lexer::from_content(Utils::read_file(filename));
 
+	for (Token token: lex.get_tokens()) {
+		std::cout << "Token[" << token.get_type() << "]" << "(" << token.get_value() << ")" << std::endl;
+	}
 
+	std::cout << "Parsing" << std::endl;
 	Parser parser = Parser(&lex);
 	std::vector<Statement*> statements = parser.parse_code();
 
@@ -27,8 +34,11 @@ int main(int argc, char** argv) {
 	std::ofstream file("main.asm");
 	file << program;
 	file.close();
-
+	/*
 	system("nasm -f elf64 -o main.o main.asm");
 	system("ld -o main.out main.o");
+	system("rm main.asm");
+	system("rm main.o");
+	*/
 	return 0;
 }

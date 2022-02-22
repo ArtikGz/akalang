@@ -35,5 +35,5 @@ public:
    * @param text
    * @return Token::Type, Token::Type::UNKNOWN if keyword wasn't found
    */
-  Token::Type lookup(std::string& text);
+  Token::Type lookup(std::string& text, long& index);
 };
