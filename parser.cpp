@@ -66,7 +66,7 @@ std::vector<Func_Arg*> Parser::parse_fnc_arguments(Token name_token) {
 }
 
 VarType Parser::get_type_from_string(std::string val) {
-	static_assert(VAR_TYPE_COUNTER == 4, "Unhandled VAR_TYPE_COUNTER on get_type_from_string");
+	static_assert(VAR_TYPE_COUNTER == 5, "Unhandled VAR_TYPE_COUNTER on get_type_from_string");
 	if (val == "int") {
 		return VAR_TYPE_INT;
 	} else if (val == "bool") {

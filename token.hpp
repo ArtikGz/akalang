@@ -36,8 +36,6 @@ public:
 		INCLUDE_DIRECTIVE,
 		TOKEN_COUNTER,
 	};
-	Token(Type type, char c);
-	Token(Type type, std::string c);
 	Token();
 
 private:

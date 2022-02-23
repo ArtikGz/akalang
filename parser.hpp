@@ -19,6 +19,7 @@ typedef enum {
 	VAR_TYPE_LONG,
 	VAR_TYPE_STR,
 	VAR_TYPE_BOOL,
+	VAR_TYPE_ANY, // used for syscalls
 	VAR_TYPE_COUNTER
 } VarType;
 

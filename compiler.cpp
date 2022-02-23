@@ -19,23 +19,20 @@ std::string Compiler::compile_program() {
 
 std::string Compiler::compile_builtin() {
 	std::string builtin_functions;
-	std::vector<std::string> source_list {"print.asm", "len.asm", "println.asm", "input.asm", "socket.asm",
-		"connect.asm", "printint.asm", "atoi.asm", "cleaninputbuf.asm", "rminputstrnl.asm", "printbool.asm"};
+	std::vector<std::string> source_list { "printint.asm", "syscalls.asm" };
 	for (const std::string& source: source_list) {
 		builtin_functions += Utils::read_file(BUILTIN_PATH + source);
 	}
 
-	global_function_register["print"] = std::vector<VarType> {VAR_TYPE_STR}; // print.asm
-	global_function_register["len"] = std::vector<VarType> {VAR_TYPE_STR}; // len.asm
-	global_function_register["println"] = std::vector<VarType> {VAR_TYPE_STR}; // println.asm
-	global_function_register["input"] = std::vector<VarType> {VAR_TYPE_STR}; // input.asm
-	global_function_register["socket"] = std::vector<VarType> {VAR_TYPE_INT, VAR_TYPE_INT, VAR_TYPE_INT}; // socket.asm
-	global_function_register["connect"] = std::vector<VarType> {VAR_TYPE_INT}; // connect.asm
 	global_function_register["printint"] = std::vector<VarType> {VAR_TYPE_INT}; // printint.asm
-	global_function_register["atoi"] = std::vector<VarType> {VAR_TYPE_STR}; // atoi.asm
-	global_function_register["cleaninputbuf"] = std::vector<VarType> {}; // cleaninputbuf.asm
-	global_function_register["rminputstrnl"] = std::vector<VarType> {}; // rminputstrnl.asm
-	global_function_register["printbool"] = std::vector<VarType> {VAR_TYPE_BOOL}; // printbool.asm
+	global_function_register["__syscall1"] = std::vector<VarType> {VAR_TYPE_ANY};
+	global_function_register["__syscall2"] = std::vector<VarType> {VAR_TYPE_ANY, VAR_TYPE_ANY};
+	global_function_register["__syscall3"] = std::vector<VarType> {VAR_TYPE_ANY, VAR_TYPE_ANY, VAR_TYPE_ANY};
+	global_function_register["__syscall4"] = std::vector<VarType> {VAR_TYPE_ANY, VAR_TYPE_ANY, VAR_TYPE_ANY, VAR_TYPE_ANY};
+	global_function_register["__syscall5"] = std::vector<VarType> {VAR_TYPE_ANY, VAR_TYPE_ANY, VAR_TYPE_ANY, VAR_TYPE_ANY, VAR_TYPE_ANY};
+
+	// disabled until fixing 6 parameter limitation on function calls
+	// global_function_register["__syscall6"] = std::vector<VarType> {VAR_TYPE_ANY};
 
 	return builtin_functions;
 }
@@ -359,10 +356,11 @@ std::string Compiler::compile_return(Statement* stmt, Shared_Info& si) {
 }
 
 void Compiler::inc_rbp_offset(int& rbp_offset, VarType data_type) {
-	static_assert(VAR_TYPE_COUNTER == 4, "Unhandled VAR_TYPE_COUNTER on inc_rbp_offset on compiler.cpp");
+	static_assert(VAR_TYPE_COUNTER == 5, "Unhandled VAR_TYPE_COUNTER on inc_rbp_offset on compiler.cpp");
 	switch (data_type) {
 		case VAR_TYPE_LONG: rbp_offset += 8; break;
 		case VAR_TYPE_STR: rbp_offset += 8; break;
+		case VAR_TYPE_ANY: rbp_offset += 8; break;
 		case VAR_TYPE_INT: rbp_offset += 4; break;
 		case VAR_TYPE_BOOL: rbp_offset += 4; break;
 		default: Utils::error("Unknown datatype");
@@ -370,10 +368,11 @@ void Compiler::inc_rbp_offset(int& rbp_offset, VarType data_type) {
 }
 
 std::string Compiler::get_reg_by_data_type_and_counter(int& counter, VarType data_type) {
-	static_assert(VAR_TYPE_COUNTER == 4, "Unhandled VAR_TYPE_COUNTER on get_reg_by_data_type_and_counter on compiler.cpp");
+	static_assert(VAR_TYPE_COUNTER == 5, "Unhandled VAR_TYPE_COUNTER on get_reg_by_data_type_and_counter on compiler.cpp");
 	switch (data_type) {
 		case VAR_TYPE_LONG: return x64regs[counter];
 		case VAR_TYPE_STR: return x64regs[counter];
+		case VAR_TYPE_ANY: return x64regs[counter];
 		case VAR_TYPE_INT: return x32regs[counter];
 		case VAR_TYPE_BOOL: return x32regs[counter];
 		default: Utils::error("Unknown datatype");
@@ -381,10 +380,11 @@ std::string Compiler::get_reg_by_data_type_and_counter(int& counter, VarType dat
 }
 
 std::string Compiler::get_return_reg_by_data_type(VarType data_type) {
-	static_assert(VAR_TYPE_COUNTER == 4, "Unhandled VAR_TYPE_COUNTER on get_reg_by_data_type_and_counter on compiler.cpp");
+	static_assert(VAR_TYPE_COUNTER == 5, "Unhandled VAR_TYPE_COUNTER on get_reg_by_data_type_and_counter on compiler.cpp");
 	switch (data_type) {
 		case VAR_TYPE_LONG: return "rax";
 		case VAR_TYPE_STR: return "rax";
+		case VAR_TYPE_ANY: return "rax";
 		case VAR_TYPE_INT: return "eax";
 		case VAR_TYPE_BOOL: return "eax";
 		default: Utils::error("Unknown datatype");
@@ -392,10 +392,11 @@ std::string Compiler::get_return_reg_by_data_type(VarType data_type) {
 }
 
 std::string Compiler::get_data_size_by_data_type(VarType data_type) {
-	static_assert(VAR_TYPE_COUNTER == 4, "Unhandled VAR_TYPE_COUNTER on get_data_size_by_data_type an compiler.cpp");
+	static_assert(VAR_TYPE_COUNTER == 5, "Unhandled VAR_TYPE_COUNTER on get_data_size_by_data_type an compiler.cpp");
 	switch (data_type) {
 		case VAR_TYPE_LONG: return "qword";
 		case VAR_TYPE_STR: return "qword";
+		case VAR_TYPE_ANY: return "qword";
 		case VAR_TYPE_INT: return "dword";
 		case VAR_TYPE_BOOL: return "dword";
 		default: Utils::error("Unknown datatype"); 
