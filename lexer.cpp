@@ -150,12 +150,12 @@ Lexer::Lexer(std::string filepath) : file_content(Utils::read_file(filepath)) {
 	tokenize();
 }
 
-Lexer Lexer::from_content(std::string content) {
-	Lexer lexer = Lexer();
-	lexer.set_file_content(content);
-	lexer.index = 0;
-	lexer.register_keywords();
-	lexer.tokenize();
+std::shared_ptr<Lexer> Lexer::from_content(std::string content) {
+  std::shared_ptr<Lexer> lexer = std::make_shared<Lexer>();
+	lexer->set_file_content(content);
+	lexer->index = 0;
+	lexer->register_keywords();
+	lexer->tokenize();
 	return lexer;
 }
 

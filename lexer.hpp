@@ -33,7 +33,7 @@ public:
 	Token explore_next_token();
 	Token explore_last_token();
 	bool is_parsed();
-	static Lexer from_content(std::string content);
+	static std::shared_ptr<Lexer> from_content(std::string content);
 	Lexer(std::string filepath);
 	Lexer();
 };

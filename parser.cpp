@@ -2,9 +2,9 @@
 #include <cstring>
 #include "parser.hpp"
 
-Parser::Parser(Lexer* lexer) : tokens(lexer->get_tokens()), lexer(lexer) {}
-std::vector<Statement*> Parser::parse_code() {
-	std::vector<Statement*> fnc_vector;
+Parser::Parser(std::shared_ptr<Lexer> lexer) : tokens(lexer->get_tokens()), lexer(lexer) {}
+std::vector<std::shared_ptr<Statement>> Parser::parse_code() {
+	std::vector<std::shared_ptr<Statement>> fnc_vector;
 	while (!lexer->is_parsed()) {
 		lexer->next_token();
 		fnc_vector.push_back(parse_function());
@@ -13,9 +13,9 @@ std::vector<Statement*> Parser::parse_code() {
 	return fnc_vector;
 }
 
-Statement* Parser::parse_function() {
-	Statement* stmt = new Statement(); 
-	stmt->fnc = new Func_Def();
+std::shared_ptr<Statement> Parser::parse_function() {
+	std::shared_ptr<Statement> stmt = std::make_shared<Statement>(); 
+	stmt->fnc = std::make_shared<Func_Def>();
 	stmt->type = STMT_TYPE_FUNCTION_DECLARATION;
 
 	Token token = lexer->expect_next_token(Token::Type::NAME, "Parsing error: expected name after fnc keyword");
@@ -42,10 +42,10 @@ Statement* Parser::parse_function() {
 	return stmt;
 }
 
-std::vector<Func_Arg*> Parser::parse_fnc_arguments(Token name_token) {
-	std::vector<Func_Arg*> function_arguments;
+std::vector<std::shared_ptr<Func_Arg>> Parser::parse_fnc_arguments(Token name_token) {
+	std::vector<std::shared_ptr<Func_Arg>> function_arguments;
 	while (true) {
-		Func_Arg* argument = new Func_Arg();
+		std::shared_ptr<Func_Arg> argument = std::make_shared<Func_Arg>();
 		argument->name = name_token.get_value();
 		lexer->expect_next_token(Token::Type::COLON, "Parsing error: untyped function params are not allowed");
 		Token token = lexer->expect_next_token(Token::Type::NAME, "Parsing error: untyped function params are not allowed");
@@ -80,10 +80,10 @@ VarType Parser::get_type_from_string(std::string val) {
 	}
 }
 
-std::vector<Statement*> Parser::parse_block() {
+std::vector<std::shared_ptr<Statement>> Parser::parse_block() {
 	static_assert(STMT_TYPE_COUNTER == 7, "Unhandled STMT_TYPE_COUNTER on parse_block() at parser.cpp");
 	bool unfinished_block = true;
-	std::vector<Statement*> block;
+	std::vector<std::shared_ptr<Statement>> block;
 
 	while (unfinished_block) {
 		Token token = lexer->next_token();
@@ -108,36 +108,25 @@ std::vector<Statement*> Parser::parse_block() {
 				break;
 			default: Utils::error("Parsing error: couldn't parse expression " + token.get_value());
 		}
-
-		if (unfinished_block) {
-			token = lexer->explore_next_token();
-			if (token.get_type() != Token::Type::CLOSE_CURLY 
-				&& token.get_type() != Token::Type::SEMICOLON) {
-				Utils::error("Parsing error: expected semicolon at the end of statement, but got " + token.get_value());
-			}
-			if (token.get_type() == Token::Type::SEMICOLON) {
-				lexer->next_token();
-			}
-		}
 	}
 
 	return block;
 }
 
-Statement* Parser::parse_while() {
-	Statement* stmt = new Statement();
+std::shared_ptr<Statement> Parser::parse_while() {
+	std::shared_ptr<Statement> stmt = std::make_shared<Statement>();
 	stmt->type = STMT_TYPE_WHILE;
-	stmt->whilee = new While();
+	stmt->whilee = std::make_shared<While>();
 	stmt->whilee->condition = parse_expr(lexer->next_token());
 	lexer->expect_next_token(Token::Type::OPEN_CURLY, "Parsing error: expected open curly after if condition, but got " + lexer->explore_last_token().get_value());
 	stmt->whilee->block = parse_block();
 	return stmt;
 }
 
-Statement* Parser::parse_if() {
-	Statement* stmt = new Statement();
+std::shared_ptr<Statement> Parser::parse_if() {
+	std::shared_ptr<Statement> stmt = std::make_shared<Statement>();
 	stmt->type = STMT_TYPE_IF;
-	stmt->iif = new If();
+	stmt->iif = std::make_shared<If>();
 	stmt->iif->condition = parse_expr(lexer->next_token());
 	lexer->expect_next_token(Token::Type::OPEN_CURLY, "Parsing error: expected open curly after if condition, but got " + lexer->explore_last_token().get_value());
 	stmt->iif->then = parse_block();
@@ -151,16 +140,16 @@ Statement* Parser::parse_if() {
 	return stmt;
 }
 
-Statement* Parser::parse_return() {
-	Statement* ret = new Statement();
+std::shared_ptr<Statement> Parser::parse_return() {
+	std::shared_ptr<Statement> ret = std::make_shared<Statement>();
 	ret->type = STMT_TYPE_RETURN;
 	ret->expr = parse_expr(lexer->next_token());
 	return ret;
 }
 
-Statement* Parser::parse_var() {
-	Statement* var = new Statement();
-	var->var = new Var_Asign();
+std::shared_ptr<Statement> Parser::parse_var() {
+	std::shared_ptr<Statement> var = std::make_shared<Statement>();
+	var->var = std::make_shared<Var_Asign>();
 	var->type = STMT_TYPE_VAR_DECLARATION;
 	Token token = lexer->expect_next_token(Token::Type::NAME, "Parsing error: expected name after var keyword");
 	var->var->name = token.get_value();
@@ -172,34 +161,36 @@ Statement* Parser::parse_var() {
 	return var;
 }
 
-Statement* Parser::parse_name() {
+std::shared_ptr<Statement> Parser::parse_name() {
 	Token token = lexer->explore_last_token();
 	Token ntoken = lexer->next_token();
 	switch (ntoken.get_type()) {
 		case Token::Type::EQUALS: return parse_var_reasignation(token);
 		case Token::Type::OPEN_PAREN: {
-			Statement* stmt = new Statement();
-			stmt->expr = new Expr();
+			std::shared_ptr<Statement> stmt = std::make_shared<Statement>();
+			stmt->expr = std::make_shared<Expr>();
 			stmt->type = STMT_TYPE_EXPR;
 			stmt->expr->type = EXPR_TYPE_FUNC_CALL;
 			stmt->expr->func_call = parse_func_call(token);
 			return stmt;
 		}
-		default: Utils::error("Parsing error: couldn't parse expression");
+		default: 
+      Utils::error("Parsing error: couldn't parse expression");
+      exit(1);
 	}
 }
 
-Statement* Parser::parse_var_reasignation(Token name) {
-	Statement* stmt = new Statement();
-	stmt->var = new Var_Asign();
+std::shared_ptr<Statement> Parser::parse_var_reasignation(Token name) {
+	std::shared_ptr<Statement> stmt = std::make_shared<Statement>();
+	stmt->var = std::make_shared<Var_Asign>();
 	stmt->type = STMT_TYPE_VAR_REASIGNATION;
 	stmt->var->name = name.get_value();
 	stmt->var->value = parse_expr(lexer->next_token());
 	return stmt;
 }
 
-Func_Call* Parser::parse_func_call(Token name) {
-	Func_Call* func_call = new Func_Call();
+std::shared_ptr<Func_Call> Parser::parse_func_call(Token name) {
+	std::shared_ptr<Func_Call> func_call = std::make_shared<Func_Call>();
 	func_call->name = name.get_value();
 
 	Token token = lexer->next_token();
@@ -213,8 +204,8 @@ Func_Call* Parser::parse_func_call(Token name) {
 	return func_call;
 }
 
-std::vector<Expr*> Parser::parse_func_call_args(Token token) {
-	std::vector<Expr*> func_call_args;
+std::vector<std::shared_ptr<Expr>> Parser::parse_func_call_args(Token token) {
+	std::vector<std::shared_ptr<Expr>> func_call_args;
 	func_call_args.push_back(parse_expr(token));
 	while (true) {
 		token = lexer->next_token();
@@ -232,13 +223,13 @@ std::vector<Expr*> Parser::parse_func_call_args(Token token) {
 	return func_call_args;
 }
 
-Expr* Parser::parse_expr(Token token) {
+std::shared_ptr<Expr> Parser::parse_expr(Token token) {
 	return parse_expr_with_precedence(token, OP_PREC_0);
 }
 
-Expr* Parser::parse_primary_expr(Token token) {
+std::shared_ptr<Expr> Parser::parse_primary_expr(Token token) {
 	static_assert(EXPR_TYPE_COUNTER == 6, "Unhandled EXPR_TYPE_FUNC_COUNT on parse_expr() on file parser.cpp");
-	Expr* expr = new Expr();
+	std::shared_ptr<Expr> expr = std::make_shared<Expr>();
 	switch (token.get_type()) {
 		case Token::Type::NAME:
 			if (token.get_value() == "true") {
@@ -278,19 +269,19 @@ Expr* Parser::parse_primary_expr(Token token) {
 	Utils::error("Unexpected parsing expression: " + token.get_value());
 }
 
-Expr* Parser::parse_expr_with_precedence(Token token, OpPrec prec) {
+std::shared_ptr<Expr> Parser::parse_expr_with_precedence(Token token, OpPrec prec) {
 	if (prec >= OP_PREC_COUNT) {
 		return parse_primary_expr(token);
 	}
 
-	Expr* expr = new Expr();
-	Expr* lhs = parse_expr_with_precedence(token, (OpPrec) (prec + 1));
+	std::shared_ptr<Expr> expr = std::make_shared<Expr>();
+	std::shared_ptr<Expr> lhs = parse_expr_with_precedence(token, (OpPrec) (prec + 1));
 
 	token = lexer->explore_next_token();
 	if (is_op(token) && get_prec_by_op_type(get_op_type_by_token_type(token)) == prec) {
 		lexer->next_token();
 		expr->type = EXPR_TYPE_OP;
-		Op* op = new Op();
+		std::shared_ptr<Op> op = std::make_shared<Op>();
 		op->type = get_op_type_by_token_type(token);
 		op->lhs = lhs;
 		op->rhs = parse_expr_with_precedence(lexer->next_token(), prec);

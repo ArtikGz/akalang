@@ -2,13 +2,13 @@
 #include <sstream>
 #include "compiler.hpp"
 
-Compiler::Compiler(std::vector<Statement*> instructions) : instructions(instructions) {}
+Compiler::Compiler(std::vector<std::shared_ptr<Statement>> instructions) : instructions(instructions) {}
 
 std::string Compiler::compile_program() {
 	std::string program = "[bits 64]\nsegment .text\n\tglobal _start\n_start:\n\tcall main\n\tmov rdi, rax\n\tmov rax, 60\n\tsyscall\n";
 	program += compile_builtin();
 
-	for (Statement* stmt: instructions) {
+	for (std::shared_ptr<Statement> stmt: instructions) {
 		program += compile_function(stmt);
 	}
 	program += build_data_segment();
@@ -37,7 +37,7 @@ std::string Compiler::compile_builtin() {
 	return builtin_functions;
 }
 
-std::string Compiler::compile_function(Statement* function) {
+std::string Compiler::compile_function(std::shared_ptr<Statement> function) {
 	Shared_Info si;
 	std::stringstream body;
 	si.rbp_offset = 0;
@@ -49,7 +49,7 @@ std::string Compiler::compile_function(Statement* function) {
 
 	std::vector<VarType> data_types;
 	int param_counter = 0;
-	for (Func_Arg* arg: function->fnc->arguments) {
+	for (std::shared_ptr<Func_Arg> arg: function->fnc->arguments) {
 		inc_rbp_offset(si.rbp_offset, arg->type);
 		std::string reg = get_reg_by_data_type_and_counter(param_counter, arg->type);
 		std::string data_size = get_data_size_by_data_type(arg->type);
@@ -60,7 +60,7 @@ std::string Compiler::compile_function(Statement* function) {
 	}
 	global_function_register[function->fnc->name] = data_types;
 
-	for (Statement* stmt: function->fnc->body) {
+	for (std::shared_ptr<Statement> stmt: function->fnc->body) {
 		body << compile_statement(stmt, si);
 	}
 
@@ -68,12 +68,11 @@ std::string Compiler::compile_function(Statement* function) {
 	compiled_function << function->fnc->name << ":\n\tpush rbp\n\tmov rbp, rsp\n\tsub rsp, " << si.rbp_offset << "\n";
 	compiled_function << body.str();
 	compiled_function << ".retpoint:\n\tadd rsp, " << si.rbp_offset << "\n\tpop rbp\n\tret\n";
-	delete function;
 
 	return compiled_function.str();
 }
 
-std::string Compiler::compile_statement(Statement* stmt, Shared_Info& si) {
+std::string Compiler::compile_statement(std::shared_ptr<Statement> stmt, Shared_Info& si) {
 	static_assert(STMT_TYPE_COUNTER == 7, "Unhandled STMT_TYPE_COUNTER on compile_statement on compiler.cpp");
 	switch (stmt->type) {
 		case STMT_TYPE_EXPR: return compile_expr(stmt->expr, si);
@@ -86,13 +85,13 @@ std::string Compiler::compile_statement(Statement* stmt, Shared_Info& si) {
 	}
 }
 
-std::string Compiler::compile_while(Statement* stmt, Shared_Info& si) {
+std::string Compiler::compile_while(std::shared_ptr<Statement> stmt, Shared_Info& si) {
 	std::stringstream ss;
 	int actual_while = si.while_counter++;
 	ss << ".WHILE" << actual_while << ":\n";
 	ss << compile_expr(stmt->whilee->condition, si);
 	ss << "\tcmp eax, 0\n\tje .ENDWHILE" << actual_while << "\n";
-	for (Statement* stmts: stmt->whilee->block) {
+	for (std::shared_ptr<Statement> stmts: stmt->whilee->block) {
 		ss << compile_statement(stmts, si);
 	}
 
@@ -102,18 +101,18 @@ std::string Compiler::compile_while(Statement* stmt, Shared_Info& si) {
 	return ss.str();
 }
 
-std::string Compiler::compile_if(Statement* stmt, Shared_Info& si) {
+std::string Compiler::compile_if(std::shared_ptr<Statement> stmt, Shared_Info& si) {
 	std::stringstream ss;
 	ss << compile_expr(stmt->iif->condition, si);
 	ss << "\tcmp eax, 0\n\tje .ELSE" << si.if_counter << "\n";
-	for (Statement* stmts: stmt->iif->then) {
+	for (std::shared_ptr<Statement> stmts: stmt->iif->then) {
 		ss << compile_statement(stmts, si);
 	}
 	ss << "\tjmp .ENDIF" << si.if_counter << "\n";
 
 	ss << ".ELSE" << si.if_counter << ":\n";
 	if (!stmt->iif->elsse.empty()) {
-		for (Statement* stmts: stmt->iif->elsse) {
+		for (std::shared_ptr<Statement> stmts: stmt->iif->elsse) {
 			ss << compile_statement(stmts, si);
 		}
 	}
@@ -122,7 +121,7 @@ std::string Compiler::compile_if(Statement* stmt, Shared_Info& si) {
 	return ss.str();
 }
 
-std::string Compiler::compile_expr(Expr* expr, Shared_Info& si) {
+std::string Compiler::compile_expr(std::shared_ptr<Expr> expr, Shared_Info& si) {
 	static_assert(EXPR_TYPE_COUNTER == 6, "Unhandled EXPR_TYPE_COUNTER in compiler_expr on compiler.cpp");
 	switch (expr->type) {
 		case EXPR_TYPE_FUNC_CALL: return compile_func_call(expr, si);
@@ -135,7 +134,7 @@ std::string Compiler::compile_expr(Expr* expr, Shared_Info& si) {
 	}
 }
 
-void Compiler::compile_op_tree(Expr* expr, std::stack<Expr*>& expr_stack, std::stack<OpType>& op_stack) {
+void Compiler::compile_op_tree(std::shared_ptr<Expr> expr, std::stack<std::shared_ptr<Expr>>& expr_stack, std::stack<OpType>& op_stack) {
 	if (expr->type == EXPR_TYPE_OP) {
 		op_stack.push(expr->op->type);
 		compile_op_tree(expr->op->lhs, expr_stack, op_stack);
@@ -145,13 +144,13 @@ void Compiler::compile_op_tree(Expr* expr, std::stack<Expr*>& expr_stack, std::s
 	}
 }
 
-std::string Compiler::compile_op(Expr* expr, Shared_Info& si) {
-	std::stack<Expr*> expr_stack;
+std::string Compiler::compile_op(std::shared_ptr<Expr> expr, Shared_Info& si) {
+	std::stack<std::shared_ptr<Expr>> expr_stack;
 	std::stack<OpType> op_stack;
 	compile_op_tree(expr, expr_stack, op_stack);
 
 	std::stringstream ss;
-	Expr* cexpr = expr_stack.top();
+	std::shared_ptr<Expr> cexpr = expr_stack.top();
 	expr_stack.pop();
 	ss << compile_expr(cexpr, si) << "\tmov ebx, eax\n";
 
@@ -212,11 +211,12 @@ std::string Compiler::compile_operation(OpType type) {
 				   "\tsete ah\n"
 				   "\tmovzx ebx, ah\n";
 
-		default: Utils::error("Unknown operation: " + type);
+		default:
+      Utils::error("Unknown operation: " + type);
 	}
 }
 
-std::string Compiler::compile_var(Statement* stmt, Shared_Info& si) {
+std::string Compiler::compile_var(std::shared_ptr<Statement> stmt, Shared_Info& si) {
 	std::stringstream ss;
 	if (si.var_declare.count(stmt->var->name) != 0) {
 		Utils::error("Variable already declared before: " + stmt->var->name);
@@ -229,7 +229,7 @@ std::string Compiler::compile_var(Statement* stmt, Shared_Info& si) {
 	return ss.str();
 }
 
-std::string Compiler::compile_var_reasignation(Statement* stmt, Shared_Info& si) {
+std::string Compiler::compile_var_reasignation(std::shared_ptr<Statement> stmt, Shared_Info& si) {
 	std::stringstream ss;
 	if (si.var_declare.count(stmt->var->name) == 0) {
 		Utils::error("Trying to reasign an undeclared variable: " + stmt->var->name);
@@ -241,7 +241,7 @@ std::string Compiler::compile_var_reasignation(Statement* stmt, Shared_Info& si)
 	return ss.str();
 }
 
-std::string Compiler::compile_var_read(Expr* expr, Shared_Info& si) {
+std::string Compiler::compile_var_read(std::shared_ptr<Expr> expr, Shared_Info& si) {
 	std::stringstream ss;
 	if (si.var_declare.count(expr->var_read) == 0) {
 		Utils::error("Undefined variable: " + expr->var_read);
@@ -252,7 +252,7 @@ std::string Compiler::compile_var_read(Expr* expr, Shared_Info& si) {
 	return ss.str();
 }
 
-std::string Compiler::compile_boolean(Expr* expr) {
+std::string Compiler::compile_boolean(std::shared_ptr<Expr> expr) {
 	std::string compiled_boolean;
 	if (expr->boolean) {
 		compiled_boolean = "\tmov eax, 1\n";
@@ -263,7 +263,7 @@ std::string Compiler::compile_boolean(Expr* expr) {
 	return compiled_boolean;
 }
 
-std::string Compiler::compile_number(Expr* expr) {
+std::string Compiler::compile_number(std::shared_ptr<Expr> expr) {
 	std::stringstream compiled_number;
 	compiled_number << "\tmov eax, " ;
 	compiled_number << expr->number;
@@ -272,7 +272,7 @@ std::string Compiler::compile_number(Expr* expr) {
 	return compiled_number.str();
 }
 
-std::string Compiler::compile_string(Expr* expr) {
+std::string Compiler::compile_string(std::shared_ptr<Expr> expr) {
 	int data_identifier = string_data_segment.size();
 	std::string compiled_string;
 	char tmp[6] = {0};
@@ -289,7 +289,7 @@ std::string Compiler::compile_string(Expr* expr) {
 	return "\tmov rax, " + std::string(str) + "\n";
 }
 
-std::string Compiler::compile_func_call(Expr* expr, Shared_Info& si) {
+std::string Compiler::compile_func_call(std::shared_ptr<Expr> expr, Shared_Info& si) {
 	std::stringstream compiled_func_call;
 	if (expr->func_call->expr.size() > 6) {
 		Utils::error("Max number of params allowed in functions: 6");
@@ -312,7 +312,7 @@ std::string Compiler::compile_func_call(Expr* expr, Shared_Info& si) {
 	std::vector<std::string> func_regs;
 	std::vector<std::string> rest_regs;
 	// First parse the func calls for avoiding problems with the registers
-	for (Expr* expr: expr->func_call->expr) {
+	for (std::shared_ptr<Expr> expr: expr->func_call->expr) {
 		if (expr->type == EXPR_TYPE_FUNC_CALL) {
 			func_regs.push_back(get_reg_by_data_type_and_counter(param_counter, data_type[param_counter]));
 		} else {
@@ -324,7 +324,7 @@ std::string Compiler::compile_func_call(Expr* expr, Shared_Info& si) {
 
 	param_counter = 0;
 	int index_counter = 0;
-	for (Expr* expr: expr->func_call->expr) {
+	for (std::shared_ptr<Expr> expr: expr->func_call->expr) {
 		if (expr->type == EXPR_TYPE_FUNC_CALL) {
 			compiled_func_call << compile_expr(expr, si);
 			compiled_func_call << "\tmov " + func_regs[index_counter++] + ", " +  get_return_reg_by_data_type(data_type[param_counter]) + "\n";
@@ -335,7 +335,7 @@ std::string Compiler::compile_func_call(Expr* expr, Shared_Info& si) {
 
 	param_counter = 0;
 	index_counter = 0;
-	for (Expr* expr: expr->func_call->expr) {
+	for (std::shared_ptr<Expr> expr: expr->func_call->expr) {
 		if (expr->type != EXPR_TYPE_FUNC_CALL) {
 			compiled_func_call << compile_expr(expr, si);
 			compiled_func_call << "\tmov " + rest_regs[index_counter++] + ", " + get_return_reg_by_data_type(data_type[param_counter]) + "\n";
@@ -348,7 +348,7 @@ std::string Compiler::compile_func_call(Expr* expr, Shared_Info& si) {
 	return compiled_func_call.str();
 }
 
-std::string Compiler::compile_return(Statement* stmt, Shared_Info& si) {
+std::string Compiler::compile_return(std::shared_ptr<Statement> stmt, Shared_Info& si) {
 	std::stringstream compiled_return;
 	compiled_return << compile_expr(stmt->expr, si) << "\tjmp .retpoint\n";
 
@@ -411,8 +411,6 @@ std::string Compiler::build_data_segment() {
 		compiled_data_segment << "\tV" << c++ << " db " << str;
 	}
 	compiled_data_segment << "\tln db 0x0A\n";
-	compiled_data_segment << "\ttext_true db \"true\", 0x00\n";
-	compiled_data_segment << "\ttext_false db \"false\", 0x00\n";
 
 	return compiled_data_segment.str();
 }

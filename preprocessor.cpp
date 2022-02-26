@@ -13,11 +13,17 @@ std::string Preprocessor::preprocess_includes(const std::string& filename) {
 	while (token.get_type() == Token::Type::INCLUDE_DIRECTIVE) {
 		token = lexer.expect_next_token(Token::Type::LITERAL_STRING, "Preprocessor error: expected filename after include directive");
 		// Avoid importing two times the same file
+    bool repeated = false;
 		for (const std::string& file: filenames) {
 			if (file == token.get_value()) {
-				Utils::error("Preprocessor error: importing same file more than one time is not allowed, " + token.get_value());
+				repeated = true;
+        break;
 			}
 		}
+
+    if (repeated) {
+      continue;
+    }
 
 		lexer.expect_next_token(Token::Type::SEMICOLON, "Preprocessor error: expected semicolon at the end of include directive");
 		filenames.push_back(token.get_value());

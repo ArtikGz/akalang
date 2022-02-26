@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <memory>
 #include "token.hpp"
 #include "lexer.hpp"
 
@@ -55,8 +56,8 @@ typedef enum {
 
 struct Op {
 	OpType type;
-	Expr* lhs;
-	Expr* rhs;
+	std::shared_ptr<Expr> lhs;
+	std::shared_ptr<Expr> rhs;
 };
 
 struct Func_Arg {
@@ -67,13 +68,13 @@ struct Func_Arg {
 struct Func_Def {
 	std::string name;
 	VarType return_type;
-	std::vector<Func_Arg*> arguments;
-	std::vector<Statement*> body;
+	std::vector<std::shared_ptr<Func_Arg>> arguments;
+	std::vector<std::shared_ptr<Statement>> body;
 };
 
 struct Func_Call {
 	std::string name;
-	std::vector<Expr*> expr;
+	std::vector<std::shared_ptr<Expr>> expr;
 };
 
 typedef enum {
@@ -90,67 +91,67 @@ static_assert(EXPR_TYPE_COUNTER == 6, "Unhandled EXPR_TYPE_COUNTER on parser.hpp
 
 struct Expr {
 	ExprType type;
-	Func_Call* func_call;
+	std::shared_ptr<Func_Call> func_call;
 	bool boolean;
 	int number;
 	std::string var_read;
 	std::string string;
-	Op* op;
+	std::shared_ptr<Op> op;
 };
 
 struct Var_Asign {
 	std::string name;
 	VarType type;
-	Expr* value;
+	std::shared_ptr<Expr> value;
 };
 
 struct Ret {
-	Expr* expr;
+	std::shared_ptr<Expr> expr;
 };
 
 struct If {
-	Expr* condition;
-	std::vector<Statement*> then;
-	std::vector<Statement*> elsse;
+	std::shared_ptr<Expr> condition;
+	std::vector<std::shared_ptr<Statement>> then;
+	std::vector<std::shared_ptr<Statement>> elsse;
 };
 
 struct While {
-	Expr* condition;
-	std::vector<Statement*> block;
+	std::shared_ptr<Expr> condition;
+	std::vector<std::shared_ptr<Statement>> block;
 };
 
 struct Statement {
 	StmtType type;
-	Func_Def* fnc;
-	Var_Asign* var;
-	Expr* expr;
-	If* iif;
-	While* whilee;
+	std::shared_ptr<Func_Def> fnc;
+	std::shared_ptr<Var_Asign> var;
+	std::shared_ptr<Expr> expr;
+	std::shared_ptr<If> iif;
+  std::shared_ptr<While> whilee;
 };
 
 class Parser {
 private:
 	std::vector<Token> tokens;
-	Lexer* lexer;
+	std::shared_ptr<Lexer> lexer;
 
 public:
-	Parser(Lexer* lexer);
-	Statement* parse_function();
-	std::vector<Statement*> parse_block();
-	std::vector<Func_Arg*> parse_fnc_arguments(Token name_token);
+	Parser(std::shared_ptr<Lexer> lexer);
+	std::shared_ptr<Statement> parse_function();
+	std::vector<std::shared_ptr<Statement>> parse_block();
+	std::vector<std::shared_ptr<Func_Arg>> parse_fnc_arguments(Token name_token);
 	VarType get_type_from_string(std::string val);
-	std::vector<Statement*> parse_code();
-	Statement* parse_name();
-	Statement* parse_return();
-	Statement* parse_if();
-	Statement* parse_while();
-	Statement* parse_var_reasignation(Token name);
-	Statement* parse_var();
-	Func_Call* parse_func_call(Token name);
-	std::vector<Expr*> parse_func_call_args(Token token);
-	Expr* parse_expr(Token token);
-	Expr* parse_primary_expr(Token token);
-	Expr* parse_expr_with_precedence(Token token, OpPrec prec);
+	std::vector<std::shared_ptr<Statement>> parse_code();
+	std::shared_ptr<Statement> parse_name();
+	std::shared_ptr<Statement> parse_return();
+	std::shared_ptr<Statement> parse_if();
+	std::shared_ptr<Statement> parse_while();
+	std::shared_ptr<Statement> parse_var_reasignation(Token name);
+	std::shared_ptr<Statement> parse_var();
+	std::shared_ptr<Func_Call> parse_func_call(Token name);
+	std::vector<std::shared_ptr<Expr>> parse_func_call_args(Token token);
+  std::shared_ptr<Expr> parse_expr(Token token);
+	std::shared_ptr<Expr> parse_primary_expr(Token token);
+	std::shared_ptr<Expr> parse_expr_with_precedence(Token token, OpPrec prec);
 	OpType get_op_type_by_token_type(Token token);
 	OpPrec get_prec_by_op_type(OpType op_type);
 	bool is_op(Token token);
