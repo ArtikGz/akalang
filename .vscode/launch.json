@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${fileDirname}/main",
-            "args": ["main.aka"],
+            "args": ["${fileDirname}/main.aka"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],

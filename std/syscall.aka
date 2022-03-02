@@ -1,0 +1,4 @@
+function __syscall_write(fd: int, string: *char, len: int) -> int {   
+    __syscall4(1, fd, string, len);
+    return 0;
+}

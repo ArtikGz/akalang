@@ -3,8 +3,14 @@
         {
             "type": "cppbuild",
             "label": "C/C++: g++ build active file",
-            "command": "make",
-            "args": ["build"],
+            "command": "/usr/bin/g++",
+            "args": [
+                "-fdiagnostics-color=always",
+                "-g",
+                "*.cpp",
+                "-o",
+                "${fileDirname}/main"
+            ],
             "options": {
                 "cwd": "${fileDirname}"
             },

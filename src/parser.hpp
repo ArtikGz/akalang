@@ -6,6 +6,7 @@
 #include "token.hpp"
 #include "lexer.hpp"
 
+typedef struct VarType VarType;
 typedef struct Func_Arg Func_Arg;
 typedef struct Expr Expr;
 typedef struct Func_Def Func_Def;
@@ -13,16 +14,22 @@ typedef struct Var_Asign Var_Asign;
 typedef struct Ret Ret;
 typedef struct If If;
 typedef struct Op Op;
+typedef struct Var_Read Var_Read;
 typedef struct Statement Statement;
 
 typedef enum {
 	VAR_TYPE_INT,
 	VAR_TYPE_LONG,
-	VAR_TYPE_STR,
+	VAR_TYPE_CHAR,
 	VAR_TYPE_BOOL,
 	VAR_TYPE_ANY, // used for syscalls
 	VAR_TYPE_COUNTER
-} VarType;
+} VarTypeT;
+
+struct VarType {
+	size_t stars; // counter of pointers
+	VarTypeT type;
+};
 
 typedef enum {
 	STMT_TYPE_FUNCTION_DECLARATION,
@@ -44,6 +51,8 @@ typedef enum {
 	OP_TYPE_LT,
 	OP_TYPE_GT,
 	OP_TYPE_EQ,
+	OP_TYPE_NEQ,
+	OP_TYPE_LTE,
 	OP_TYPE_COUNT
 } OpType;
 
@@ -58,6 +67,11 @@ struct Op {
 	OpType type;
 	std::shared_ptr<Expr> lhs;
 	std::shared_ptr<Expr> rhs;
+};
+
+struct Var_Read {
+	std::string var_name;
+	size_t stars;
 };
 
 struct Func_Arg {
@@ -94,7 +108,7 @@ struct Expr {
 	std::shared_ptr<Func_Call> func_call;
 	bool boolean;
 	int number;
-	std::string var_read;
+	Var_Read var_read;
 	std::string string;
 	std::shared_ptr<Op> op;
 };
@@ -132,14 +146,30 @@ struct Statement {
 class Parser {
 private:
 	std::vector<Token> tokens;
-	std::shared_ptr<Lexer> lexer;
+	std::unique_ptr<Lexer> lexer;
 
 public:
-	Parser(std::shared_ptr<Lexer> lexer);
+	Parser(std::unique_ptr<Lexer>&& lexer);
 	std::shared_ptr<Statement> parse_function();
 	std::vector<std::shared_ptr<Statement>> parse_block();
 	std::vector<std::shared_ptr<Func_Arg>> parse_fnc_arguments(Token name_token);
-	VarType get_type_from_string(std::string val);
+
+	/**
+	 * @brief Get akalang type from string
+	 * 
+	 * @param stars number of pointers before type
+	 * @param val string with the string representation of the type
+	 * @return VarType 
+	 */
+	VarType get_type_from_string(size_t stars, std::string val);
+
+	/**
+	 * @brief count number of pointer stars consecutive
+	 * 
+	 * @return size_t stars counted
+	 */
+	size_t count_stars();
+
 	std::vector<std::shared_ptr<Statement>> parse_code();
 	std::shared_ptr<Statement> parse_name();
 	std::shared_ptr<Statement> parse_return();
@@ -149,7 +179,7 @@ public:
 	std::shared_ptr<Statement> parse_var();
 	std::shared_ptr<Func_Call> parse_func_call(Token name);
 	std::vector<std::shared_ptr<Expr>> parse_func_call_args(Token token);
-  std::shared_ptr<Expr> parse_expr(Token token);
+	std::shared_ptr<Expr> parse_expr(Token token);
 	std::shared_ptr<Expr> parse_primary_expr(Token token);
 	std::shared_ptr<Expr> parse_expr_with_precedence(Token token, OpPrec prec);
 	OpType get_op_type_by_token_type(Token token);

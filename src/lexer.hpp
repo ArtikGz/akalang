@@ -29,11 +29,35 @@ public:
 	void set_tokens(std::vector<Token> tokens);
 	std::vector<Token> get_tokens();
 	Token expect_next_token(Token::Type token_type, std::string error_msg);
+
+	/**
+	 * @brief Get next token adding one to the token list index
+	 * 
+	 * @return Token 
+	 */
 	Token next_token();
+
+	/**
+	 * @brief Substracts one to the token list index
+	 * 
+	 */
+	void return_index();
+
+	/**
+	 * @brief Get next token without moving the token list index
+	 * 
+	 * @return Token 
+	 */
 	Token explore_next_token();
+
+	/**
+	 * @brief Get previous token without moving the token list index
+	 * 
+	 * @return Token 
+	 */
 	Token explore_last_token();
 	bool is_parsed();
-	static std::shared_ptr<Lexer> from_content(std::string content);
+	static std::unique_ptr<Lexer> from_content(std::string content);
 	Lexer(std::string filepath);
 	Lexer();
 };

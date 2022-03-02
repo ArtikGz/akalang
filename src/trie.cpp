@@ -15,7 +15,7 @@ void Trie::add_keyword(std::string&& keyword, Token::Type type) {
 
   for (int i = 0; i < size; i++) {
     if (get_child_node(last, keyword, i) == nullptr) {
-      get_child_node(last, keyword, i) = std::shared_ptr<Node>(new Node());
+      get_child_node(last, keyword, i) = std::make_shared<Node>();
     }
 
     last = get_child_node(last, keyword, i);

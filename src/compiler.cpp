@@ -5,7 +5,7 @@
 Compiler::Compiler(std::vector<std::shared_ptr<Statement>> instructions) : instructions(instructions) {}
 
 std::string Compiler::compile_program() {
-	std::string program = "[bits 64]\nsegment .text\n\tglobal _start\n_start:\n\tcall main\n\tmov rdi, rax\n\tmov rax, 60\n\tsyscall\n";
+	std::string program = "[bits 64]\nsegment .text\n\tglobal _start\n_start:\n\tmov rdi, [rsp]\n\tlea rsi, [rsp + 8]\n\tcall main\n\tmov rdi, rax\n\tmov rax, 60\n\tsyscall\n";
 	program += compile_builtin();
 
 	for (std::shared_ptr<Statement> stmt: instructions) {
@@ -24,15 +24,15 @@ std::string Compiler::compile_builtin() {
 		builtin_functions += Utils::read_file(BUILTIN_PATH + source);
 	}
 
-	global_function_register["printint"] = std::vector<VarType> {VAR_TYPE_INT}; // printint.asm
-	global_function_register["__syscall1"] = std::vector<VarType> {VAR_TYPE_ANY};
-	global_function_register["__syscall2"] = std::vector<VarType> {VAR_TYPE_ANY, VAR_TYPE_ANY};
-	global_function_register["__syscall3"] = std::vector<VarType> {VAR_TYPE_ANY, VAR_TYPE_ANY, VAR_TYPE_ANY};
-	global_function_register["__syscall4"] = std::vector<VarType> {VAR_TYPE_ANY, VAR_TYPE_ANY, VAR_TYPE_ANY, VAR_TYPE_ANY};
-	global_function_register["__syscall5"] = std::vector<VarType> {VAR_TYPE_ANY, VAR_TYPE_ANY, VAR_TYPE_ANY, VAR_TYPE_ANY, VAR_TYPE_ANY};
+	global_function_register["printint"] = std::vector<VarType> {VAR_TYPE(VAR_TYPE_INT, 0)}; // printint.asm
+	global_function_register["__syscall1"] = std::vector<VarType> {VAR_TYPE(VAR_TYPE_ANY, 0)};
+	global_function_register["__syscall2"] = std::vector<VarType> {VAR_TYPE(VAR_TYPE_ANY, 0), VAR_TYPE(VAR_TYPE_ANY, 0)};
+	global_function_register["__syscall3"] = std::vector<VarType> {VAR_TYPE(VAR_TYPE_ANY, 0), VAR_TYPE(VAR_TYPE_ANY, 0), VAR_TYPE(VAR_TYPE_ANY, 0)};
+	global_function_register["__syscall4"] = std::vector<VarType> {VAR_TYPE(VAR_TYPE_ANY, 0), VAR_TYPE(VAR_TYPE_ANY, 0), VAR_TYPE(VAR_TYPE_ANY, 0), VAR_TYPE(VAR_TYPE_ANY, 0)};
+	global_function_register["__syscall5"] = std::vector<VarType> {VAR_TYPE(VAR_TYPE_ANY, 0), VAR_TYPE(VAR_TYPE_ANY, 0), VAR_TYPE(VAR_TYPE_ANY, 0), VAR_TYPE(VAR_TYPE_ANY, 0), VAR_TYPE(VAR_TYPE_ANY, 0)};
 
 	// disabled until fixing 6 parameter limitation on function calls
-	// global_function_register["__syscall6"] = std::vector<VarType> {VAR_TYPE_ANY};
+	// global_function_register["__syscall6"] = std::vector<VarType> {VAR_TYPE(VAR_TYPE_ANY, 0)};
 
 	return builtin_functions;
 }
@@ -81,7 +81,7 @@ std::string Compiler::compile_statement(std::shared_ptr<Statement> stmt, Shared_
 		case STMT_TYPE_VAR_REASIGNATION: return compile_var_reasignation(stmt, si);
 		case STMT_TYPE_IF: return compile_if(stmt, si);
 		case STMT_TYPE_WHILE: return compile_while(stmt, si);
-		default: Utils::error("Unknown expression");
+		default: Utils::error("Unknown expression"); exit(1);
 	}
 }
 
@@ -130,7 +130,7 @@ std::string Compiler::compile_expr(std::shared_ptr<Expr> expr, Shared_Info& si) 
 		case EXPR_TYPE_LITERAL_STRING: return compile_string(expr);
 		case EXPR_TYPE_VAR_READ: return compile_var_read(expr, si);
 		case EXPR_TYPE_OP: return compile_op(expr, si);
-		default: Utils::error("Unknown expression");
+		default: Utils::error("Unknown expression"); exit(1);
 	}
 }
 
@@ -152,67 +152,78 @@ std::string Compiler::compile_op(std::shared_ptr<Expr> expr, Shared_Info& si) {
 	std::stringstream ss;
 	std::shared_ptr<Expr> cexpr = expr_stack.top();
 	expr_stack.pop();
-	ss << compile_expr(cexpr, si) << "\tmov ebx, eax\n";
+	ss << compile_expr(cexpr, si) << "\tmov rbx, rax\n";
 
 	while(!op_stack.empty()) {
 		cexpr = expr_stack.top();
 		expr_stack.pop();
-		ss << compile_expr(cexpr, si) << compile_operation(op_stack.top());
+		ss << "\txor rax, rax\n";
+		ss << compile_expr(cexpr, si);
+		ss << compile_operation(op_stack.top());
 		op_stack.pop();
 	}
 
-	ss << "\tmov eax, ebx\n";
+	ss << "\tmov rax, rbx\n";
 	return ss.str();
 }
 
 std::string Compiler::compile_operation(OpType type) {
-	static_assert(OP_TYPE_COUNT == 8, "Unhandled OP_TYPE_COUNT on compile_operation() at compiler.cpp");
+	static_assert(OP_TYPE_COUNT == 10, "Unhandled OP_TYPE_COUNT on compile_operation() at compiler.cpp");
 	switch (type) {
 		case OP_TYPE_ADD:
-			return "\tadd ebx, eax\n";
+			return "\tadd rbx, rax\n";
 
 		case OP_TYPE_SUB:
-			return "\tsub eax, ebx\n"
-				   "\tmov ebx, eax\n";
+			return "\tsub rax, rbx\n"
+				   "\tmov rbx, rax\n";
 
 		case OP_TYPE_DIV: 
-		 	return "\tpush edx\n"
-			 	   "\txor edx, edx\n"
-				   "\tidiv ebx\n"
-				   "\tmov ebx, eax\n"
-				   "\tpop edx\n";
+		 	return "\tpush rdx\n"
+			 	   "\txor rdx, rdx\n"
+				   "\tidiv rbx\n"
+				   "\tmov rbx, rax\n"
+				   "\tpop rdx\n";
 	 
 		case OP_TYPE_MOD: 
-		 	return "\tmov ecx, eax\n"
-				   "\tmov eax, ebx\n"
-				   "\tmov ebx, ecx\n"
+		 	return "\tmov rcx, rax\n"
+				   "\tmov rax, rbx\n"
+				   "\tmov rbx, rcx\n"
 				   "\tpush rdx\n"
 				   "\txor rdx, rdx\n"
-				   "\tidiv ebx\n"
-				   "\tmov ebx, edx\n"
+				   "\tidiv rbx\n"
+				   "\tmov rbx, rdx\n"
 				   "\tpop rdx\n";
 
 		case OP_TYPE_MUL:
-			return "\timul eax, ebx\n"
-				   "\tmov ebx, eax\n";
+			return "\timul rax, rbx\n"
+				   "\tmov rbx, rax\n";
 
 		case OP_TYPE_LT:
-			return "\tcmp eax, ebx\n"
-				   "\tsetl ah\n"
-				   "\tmovzx ebx, ah\n";
+			return "\tcmp rax, rbx\n"
+				   "\tsetl al\n"
+				   "\tmovzx rbx, al\n";
 
 		case OP_TYPE_GT:
-			return "\tcmp eax, ebx\n"
-				   "\tsetg ah\n"
-				   "\tmovzx ebx, ah\n";
+			return "\tcmp rax, rbx\n"
+				   "\tsetg al\n"
+				   "\tmovzx rbx, al\n";
 
 		case OP_TYPE_EQ:
-			return "\tcmp ebx, eax\n"
-				   "\tsete ah\n"
-				   "\tmovzx ebx, ah\n";
+			return "\tcmp rbx, rax\n"
+				   "\tsete al\n"
+				   "\tmovzx rbx, al\n";
 
-		default:
-      Utils::error("Unknown operation: " + type);
+		case OP_TYPE_NEQ:
+			return "\tcmp rbx, rax\n"
+				   "\tsetne al\n"
+				   "\tmovzx rbx, al\n";
+
+		case OP_TYPE_LTE:
+			return "\tcmp rbx, rax\n"
+				   "\tsetle al\n"
+				   "\tmovzx rbx, al\n";
+
+		default: Utils::error("Unknown operation: " + type); exit(1);
 	}
 }
 
@@ -243,21 +254,33 @@ std::string Compiler::compile_var_reasignation(std::shared_ptr<Statement> stmt, 
 
 std::string Compiler::compile_var_read(std::shared_ptr<Expr> expr, Shared_Info& si) {
 	std::stringstream ss;
-	if (si.var_declare.count(expr->var_read) == 0) {
-		Utils::error("Undefined variable: " + expr->var_read);
+	if (si.var_declare.count(expr->var_read.var_name) == 0) {
+		Utils::error("Undefined variable: " + expr->var_read.var_name);
 	}
-	Var_Declared vd = si.var_declare[expr->var_read];
+	Var_Declared vd = si.var_declare[expr->var_read.var_name];
 
-	ss << "\tmov " << get_return_reg_by_data_type(vd.type) << ", [rbp - " << vd.rbp_offset << "]\n";
+	std::string last_return_reg = get_return_reg_by_data_type(vd.type);
+	ss << "\tmov " << last_return_reg << ", " << get_data_size_by_data_type(vd.type) << " [rbp - " << vd.rbp_offset << "]\n";
+
+	
+	while (expr->var_read.stars-- > 0) {
+		vd.type.stars -= 1;
+		ss << "\tmov " << get_return_reg_by_data_type(vd.type) << ", " << get_data_size_by_data_type(vd.type) << " [" << last_return_reg << "]" << "\n";
+		last_return_reg = get_return_reg_by_data_type(vd.type);
+		if (last_return_reg == "al") {
+			ss << "\tmovzx rax, al\n";
+		}
+	}
+
 	return ss.str();
 }
 
 std::string Compiler::compile_boolean(std::shared_ptr<Expr> expr) {
 	std::string compiled_boolean;
 	if (expr->boolean) {
-		compiled_boolean = "\tmov eax, 1\n";
+		compiled_boolean = "\tmov rax, 1\n";
 	} else {
-		compiled_boolean = "\tmov eax, 0\n";
+		compiled_boolean = "\tmov rax, 0\n";
 	}
 
 	return compiled_boolean;
@@ -265,7 +288,7 @@ std::string Compiler::compile_boolean(std::shared_ptr<Expr> expr) {
 
 std::string Compiler::compile_number(std::shared_ptr<Expr> expr) {
 	std::stringstream compiled_number;
-	compiled_number << "\tmov eax, " ;
+	compiled_number << "\tmov rax, " ;
 	compiled_number << expr->number;
 	compiled_number << "\n";
 
@@ -357,49 +380,66 @@ std::string Compiler::compile_return(std::shared_ptr<Statement> stmt, Shared_Inf
 
 void Compiler::inc_rbp_offset(int& rbp_offset, VarType data_type) {
 	static_assert(VAR_TYPE_COUNTER == 5, "Unhandled VAR_TYPE_COUNTER on inc_rbp_offset on compiler.cpp");
-	switch (data_type) {
+	if (data_type.stars > 0) {
+		rbp_offset += 8;
+		return;
+	}
+
+	switch (data_type.type) {
 		case VAR_TYPE_LONG: rbp_offset += 8; break;
-		case VAR_TYPE_STR: rbp_offset += 8; break;
 		case VAR_TYPE_ANY: rbp_offset += 8; break;
 		case VAR_TYPE_INT: rbp_offset += 4; break;
 		case VAR_TYPE_BOOL: rbp_offset += 4; break;
+		case VAR_TYPE_CHAR: rbp_offset += 1; break;
 		default: Utils::error("Unknown datatype");
 	}
 }
 
 std::string Compiler::get_reg_by_data_type_and_counter(int& counter, VarType data_type) {
 	static_assert(VAR_TYPE_COUNTER == 5, "Unhandled VAR_TYPE_COUNTER on get_reg_by_data_type_and_counter on compiler.cpp");
-	switch (data_type) {
+	if (data_type.stars > 0) {
+		return x64regs[counter];
+	}
+
+	switch (data_type.type) {
 		case VAR_TYPE_LONG: return x64regs[counter];
-		case VAR_TYPE_STR: return x64regs[counter];
 		case VAR_TYPE_ANY: return x64regs[counter];
 		case VAR_TYPE_INT: return x32regs[counter];
-		case VAR_TYPE_BOOL: return x32regs[counter];
-		default: Utils::error("Unknown datatype");
+		case VAR_TYPE_BOOL: return x8regs[counter];
+		case VAR_TYPE_CHAR: return x8regs[counter];
+		default: Utils::error("Unknown datatype"); exit(1);
 	}
 }
 
 std::string Compiler::get_return_reg_by_data_type(VarType data_type) {
 	static_assert(VAR_TYPE_COUNTER == 5, "Unhandled VAR_TYPE_COUNTER on get_reg_by_data_type_and_counter on compiler.cpp");
-	switch (data_type) {
+	if (data_type.stars > 0) {
+		return "rax";
+	}
+
+	switch (data_type.type) {
 		case VAR_TYPE_LONG: return "rax";
-		case VAR_TYPE_STR: return "rax";
 		case VAR_TYPE_ANY: return "rax";
 		case VAR_TYPE_INT: return "eax";
-		case VAR_TYPE_BOOL: return "eax";
-		default: Utils::error("Unknown datatype");
+		case VAR_TYPE_BOOL: return "al";
+		case VAR_TYPE_CHAR: return "al";
+		default: Utils::error("Unknown datatype"); exit(1);
 	}
 }
 
 std::string Compiler::get_data_size_by_data_type(VarType data_type) {
 	static_assert(VAR_TYPE_COUNTER == 5, "Unhandled VAR_TYPE_COUNTER on get_data_size_by_data_type an compiler.cpp");
-	switch (data_type) {
+	if (data_type.stars > 0) {
+		return "qword";
+	}
+
+	switch (data_type.type) {
 		case VAR_TYPE_LONG: return "qword";
-		case VAR_TYPE_STR: return "qword";
 		case VAR_TYPE_ANY: return "qword";
 		case VAR_TYPE_INT: return "dword";
-		case VAR_TYPE_BOOL: return "dword";
-		default: Utils::error("Unknown datatype"); 
+		case VAR_TYPE_BOOL: return "byte";
+		case VAR_TYPE_CHAR: return "byte";
+		default: Utils::error("Unknown datatype"); exit(1);
 	}
 }
 

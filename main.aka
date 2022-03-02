@@ -1,0 +1,8 @@
+include "std/string.aka";
+include "std/stdio.aka";
+
+function main(argc: int, argv: **char) -> int {
+	puts(*argv);
+
+	return 0;
+}

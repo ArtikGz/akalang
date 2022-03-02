@@ -5,6 +5,11 @@
 #include "parser.hpp"
 #include "lexer.hpp"
 
+#define VAR_TYPE(varType, starsC) (VarType) { \
+										.stars = starsC, \
+										.type = varType  \
+									}
+
 typedef struct {
 	int rbp_offset;
 	VarType type;
@@ -20,6 +25,8 @@ typedef struct {
 // Registers order for function parameters
 const std::vector<std::string> x64regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 const std::vector<std::string> x32regs = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
+const std::vector<std::string> x16regs = {"di", "si", "dx", "cx", "r8w", "r9w"};
+const std::vector<std::string> x8regs = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
 const std::string BUILTIN_PATH = "./builtin/";
 
 class Compiler {

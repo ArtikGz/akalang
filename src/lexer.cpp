@@ -90,6 +90,7 @@ Token Lexer::expect_next_token(Token::Type token_type, std::string error_msg) {
 		return this->tokens[index++];
 	} else {
 		Utils::error(error_msg);
+		exit(1);
 	}
 }
 
@@ -123,12 +124,14 @@ void Lexer::register_keywords() {
 	trie.add_keyword(",", Token::Type::COMMA);
 	trie.add_keyword("=", Token::Type::EQUALS);
 	trie.add_keyword("==", Token::Type::EQUALS_COMPARE);
+	trie.add_keyword("<=", Token::Type::LOWER_THAN_EQUALS);
+	trie.add_keyword("!=", Token::Type::BANG_EQUALS);
 	trie.add_keyword("-", Token::Type::SUB);
 	trie.add_keyword("+", Token::Type::ADD);
 	trie.add_keyword("/", Token::Type::DIV);
 	trie.add_keyword("*", Token::Type::MUL);
 	trie.add_keyword("%", Token::Type::MOD);
-	trie.add_keyword("fnc", Token::Type::FUNCTION);
+	trie.add_keyword("function", Token::Type::FUNCTION);
 	trie.add_keyword("return", Token::Type::RETURN);
 	trie.add_keyword("var", Token::Type::VAR);
 	trie.add_keyword("if", Token::Type::IF);
@@ -136,6 +139,11 @@ void Lexer::register_keywords() {
 	trie.add_keyword("include", Token::Type::INCLUDE_DIRECTIVE);
 	trie.add_keyword("else", Token::Type::ELSE);
 	trie.add_keyword("while", Token::Type::WHILE);
+	trie.add_keyword("->", Token::Type::ARROW);
+}
+
+void Lexer::return_index() {
+	index -= 1;
 }
 
 void Lexer::set_file_content(std::string file_content) { this->file_content = file_content; }
@@ -150,8 +158,8 @@ Lexer::Lexer(std::string filepath) : file_content(Utils::read_file(filepath)) {
 	tokenize();
 }
 
-std::shared_ptr<Lexer> Lexer::from_content(std::string content) {
-  std::shared_ptr<Lexer> lexer = std::make_shared<Lexer>();
+std::unique_ptr<Lexer> Lexer::from_content(std::string content) {
+  std::unique_ptr<Lexer> lexer = std::make_unique<Lexer>();
 	lexer->set_file_content(content);
 	lexer->index = 0;
 	lexer->register_keywords();
@@ -159,4 +167,4 @@ std::shared_ptr<Lexer> Lexer::from_content(std::string content) {
 	return lexer;
 }
 
-static_assert(Token::Type::TOKEN_COUNTER == 30, "Unhandled TOKEN_COUNTER on lexer.cpp");
+static_assert(Token::Type::TOKEN_COUNTER == 33, "Unhandled TOKEN_COUNTER on lexer.cpp");

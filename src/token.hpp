@@ -34,6 +34,9 @@ public:
 		DIV,
 		MOD,
 		INCLUDE_DIRECTIVE,
+		ARROW,
+		BANG_EQUALS,
+		LOWER_THAN_EQUALS,
 		TOKEN_COUNTER,
 	};
 	Token();

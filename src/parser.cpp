@@ -2,7 +2,7 @@
 #include <cstring>
 #include "parser.hpp"
 
-Parser::Parser(std::shared_ptr<Lexer> lexer) : tokens(lexer->get_tokens()), lexer(lexer) {}
+Parser::Parser(std::unique_ptr<Lexer>&& lexer) : tokens(lexer->get_tokens()), lexer(std::move(lexer)) {}
 std::vector<std::shared_ptr<Statement>> Parser::parse_code() {
 	std::vector<std::shared_ptr<Statement>> fnc_vector;
 	while (!lexer->is_parsed()) {
@@ -18,7 +18,7 @@ std::shared_ptr<Statement> Parser::parse_function() {
 	stmt->fnc = std::make_shared<Func_Def>();
 	stmt->type = STMT_TYPE_FUNCTION_DECLARATION;
 
-	Token token = lexer->expect_next_token(Token::Type::NAME, "Parsing error: expected name after fnc keyword");
+	Token token = lexer->expect_next_token(Token::Type::NAME, "Parsing error: expected name after function keyword, but got " + lexer->explore_last_token().get_value());
 	stmt->fnc->name = token.get_value();
 
 	lexer->expect_next_token(Token::Type::OPEN_PAREN, "Parsing error: expected open paren after function declaration");
@@ -32,9 +32,8 @@ std::shared_ptr<Statement> Parser::parse_function() {
 		stmt->fnc->arguments = parse_fnc_arguments(token);
 	} 
 
-	lexer->expect_next_token(Token::Type::GREATER_THAN, "Parsing error: expected type after function arguments");
-	token = lexer->expect_next_token(Token::Type::NAME, "Parsing error: untyped functions are not allowed");
-	stmt->fnc->return_type = get_type_from_string(token.get_value());
+	lexer->expect_next_token(Token::Type::ARROW, "Parsing error: expected type after function arguments");
+	stmt->fnc->return_type = get_type_from_string(count_stars(), lexer->expect_next_token(Token::Type::NAME, "Parsing error: expected a name as function type").get_value());
 
 	lexer->expect_next_token(Token::Type::OPEN_CURLY, "Parsing error: expected block after function declaration");
 	stmt->fnc->body = parse_block();
@@ -47,9 +46,12 @@ std::vector<std::shared_ptr<Func_Arg>> Parser::parse_fnc_arguments(Token name_to
 	while (true) {
 		std::shared_ptr<Func_Arg> argument = std::make_shared<Func_Arg>();
 		argument->name = name_token.get_value();
-		lexer->expect_next_token(Token::Type::COLON, "Parsing error: untyped function params are not allowed");
-		Token token = lexer->expect_next_token(Token::Type::NAME, "Parsing error: untyped function params are not allowed");
-		argument->type = get_type_from_string(token.get_value());
+		lexer->expect_next_token(Token::Type::COLON, "Parsing error: expected colon after name on function definition arguments");
+
+		size_t stars = count_stars();
+		std::string datastr = lexer->expect_next_token(Token::Type::NAME, "Parsing error: expected name after colon on function definition arguments").get_value();
+		argument->type = get_type_from_string(stars, datastr);
+
 		function_arguments.push_back(argument);
 
 		name_token = lexer->next_token();
@@ -65,19 +67,34 @@ std::vector<std::shared_ptr<Func_Arg>> Parser::parse_fnc_arguments(Token name_to
 	return function_arguments;
 }
 
-VarType Parser::get_type_from_string(std::string val) {
+size_t Parser::count_stars() {
+  int counter = 0;
+  while (lexer->explore_next_token().get_type() == Token::Type::MUL) {
+    lexer->next_token();
+    counter += 1;
+  }
+
+  return counter;
+}
+
+VarType Parser::get_type_from_string(size_t stars, std::string val) {
 	static_assert(VAR_TYPE_COUNTER == 5, "Unhandled VAR_TYPE_COUNTER on get_type_from_string");
+	VarType varType;
+	varType.stars = stars;
+
 	if (val == "int") {
-		return VAR_TYPE_INT;
+		varType.type = VAR_TYPE_INT;
 	} else if (val == "bool") {
-		return VAR_TYPE_BOOL;
+		varType.type = VAR_TYPE_BOOL;
 	} else if (val == "long") {
-		return VAR_TYPE_LONG;
-	} else if (val == "str") {
-		return VAR_TYPE_STR;
+		varType.type = VAR_TYPE_LONG;
+	} else if (val == "char") {
+		varType.type = VAR_TYPE_CHAR;
 	} else {
-		Utils::error("Parsing error: unknown type (types allowed: int, bool, long, str)");
+		Utils::error("Parsing error: unknown type (types allowed: int, bool, long, char), but got " + val);
 	}
+
+  return varType;
 }
 
 std::vector<std::shared_ptr<Statement>> Parser::parse_block() {
@@ -106,7 +123,11 @@ std::vector<std::shared_ptr<Statement>> Parser::parse_block() {
 			case Token::Type::CLOSE_CURLY: 
 				unfinished_block = false;
 				break;
-			default: Utils::error("Parsing error: couldn't parse expression " + token.get_value());
+			case Token::Type::SEMICOLON:
+				// Allows optional semicolon at end of the statement
+				break;
+			default:
+				Utils::error("Parsing error: couldn't parse expression " + token.get_value());
 		}
 	}
 
@@ -153,9 +174,12 @@ std::shared_ptr<Statement> Parser::parse_var() {
 	var->type = STMT_TYPE_VAR_DECLARATION;
 	Token token = lexer->expect_next_token(Token::Type::NAME, "Parsing error: expected name after var keyword");
 	var->var->name = token.get_value();
-	lexer->expect_next_token(Token::Type::COLON, "Parsing error: untyped variables are not allowed");
-	token = lexer->expect_next_token(Token::Type::NAME, "Parsing error: untyped variables are not allowed");
-	var->var->type = get_type_from_string(token.get_value());
+	lexer->expect_next_token(Token::Type::COLON, "Parsing error: missing semicolon after var name");
+
+	size_t stars = count_stars();
+	std::string typestr = lexer->expect_next_token(Token::Type::NAME, "Parsing error: untyped variables are not allowed").get_value();
+	var->var->type = get_type_from_string(stars, typestr);
+
 	lexer->expect_next_token(Token::Type::EQUALS, "Parsing error: expected expresion after variable declaration");
 	var->var->value = parse_expr(lexer->next_token());
 	return var;
@@ -174,9 +198,7 @@ std::shared_ptr<Statement> Parser::parse_name() {
 			stmt->expr->func_call = parse_func_call(token);
 			return stmt;
 		}
-		default: 
-      Utils::error("Parsing error: couldn't parse expression");
-      exit(1);
+		default: Utils::error("Parsing error: exppected '=' or '(' symbol after using a name as an statemeent"); exit(1);
 	}
 }
 
@@ -194,10 +216,7 @@ std::shared_ptr<Func_Call> Parser::parse_func_call(Token name) {
 	func_call->name = name.get_value();
 
 	Token token = lexer->next_token();
-	if (token.get_type() != Token::Type::CLOSE_PAREN 
-		&& token.get_type() == Token::Type::NAME
-		|| token.get_type() == Token::Type::LITERAL_NUMBER
-		|| token.get_type() == Token::Type::LITERAL_STRING) {
+	if (token.get_type() != Token::Type::CLOSE_PAREN) {
 		func_call->expr = parse_func_call_args(token);
 	}
 
@@ -249,7 +268,11 @@ std::shared_ptr<Expr> Parser::parse_primary_expr(Token token) {
 					return expr;
 				} else {
 					expr->type = EXPR_TYPE_VAR_READ;
-					expr->var_read = token.get_value();
+
+					Var_Read varRead;
+					varRead.stars = 0;
+					varRead.var_name = token.get_value();
+					expr->var_read = varRead;
 					return expr;
 				}
 			}
@@ -264,9 +287,19 @@ std::shared_ptr<Expr> Parser::parse_primary_expr(Token token) {
 			expr->string = token.get_value(); // TODO add string parse
 			return expr;
 		}
-	}
 
-	Utils::error("Unexpected parsing expression: " + token.get_value());
+		case Token::Type::MUL: {
+			expr->type = EXPR_TYPE_VAR_READ;
+			Var_Read varRead;
+
+			lexer->return_index();
+			varRead.stars = count_stars();
+			varRead.var_name = lexer->expect_next_token(Token::Type::NAME, "Parsing error: expected name after '*' symbol on expression").get_value();
+			expr->var_read = varRead;
+			return expr;
+		}
+		default: Utils::error("Unexpected parsing expression: " + token.get_value()); exit(1);
+	}
 }
 
 std::shared_ptr<Expr> Parser::parse_expr_with_precedence(Token token, OpPrec prec) {
@@ -295,7 +328,7 @@ std::shared_ptr<Expr> Parser::parse_expr_with_precedence(Token token, OpPrec pre
 }
 
 OpType Parser::get_op_type_by_token_type(Token token) {
-	static_assert(OP_TYPE_COUNT == 8, "Unhandled OP_TYPE_COUNT on get_op_type_by_token_type at parser.cpp");
+	static_assert(OP_TYPE_COUNT == 10, "Unhandled OP_TYPE_COUNT on get_op_type_by_token_type at parser.cpp");
 	switch (token.get_type()) {
 		case Token::Type::ADD: return OP_TYPE_ADD;
 		case Token::Type::SUB: return OP_TYPE_SUB;
@@ -305,16 +338,20 @@ OpType Parser::get_op_type_by_token_type(Token token) {
 		case Token::Type::LOWER_THAN: return OP_TYPE_LT;
 		case Token::Type::GREATER_THAN: return OP_TYPE_GT;
 		case Token::Type::EQUALS_COMPARE: return OP_TYPE_EQ;
-		default: Utils::error("Unknown token type: " + token.get_value());
+		case Token::Type::BANG_EQUALS: return OP_TYPE_NEQ;
+		case Token::Type::LOWER_THAN_EQUALS: return OP_TYPE_LTE;
+		default: Utils::error("Unknown token type: " + token.get_value()); exit(1);
 	}
 }
 
 OpPrec Parser::get_prec_by_op_type(OpType op_type) {
-	static_assert(OP_TYPE_COUNT == 8, "Unhandled OP_TYPE_COUNT on get_prec_by_op_type at parser.cpp");
+	static_assert(OP_TYPE_COUNT == 10, "Unhandled OP_TYPE_COUNT on get_prec_by_op_type at parser.cpp");
 	switch (op_type) {
 		case OP_TYPE_LT:
 		case OP_TYPE_GT:
 		case OP_TYPE_EQ:
+		case OP_TYPE_NEQ:
+		case OP_TYPE_LTE:
 			return OP_PREC_0;
 		case OP_TYPE_ADD: 
 		case OP_TYPE_SUB:
@@ -323,16 +360,18 @@ OpPrec Parser::get_prec_by_op_type(OpType op_type) {
 		case OP_TYPE_DIV: 
 		case OP_TYPE_MOD:
 			return OP_PREC_2;
-		default: Utils::error("Unknown operation type");
+		default: Utils::error("Unknown operation type"); exit(1);
 	}
 }
 
 bool Parser::is_op(Token token) {
-	static_assert(OP_TYPE_COUNT == 8, "Unhandled OP_TYPE_COUNT on get_op_type_by_token_type at parser.cpp");
+	static_assert(OP_TYPE_COUNT == 10, "Unhandled OP_TYPE_COUNT on get_op_type_by_token_type at parser.cpp");
 	switch (token.get_type()) {
 		case Token::Type::LOWER_THAN:
 		case Token::Type::GREATER_THAN:
 		case Token::Type::EQUALS_COMPARE:
+		case Token::Type::BANG_EQUALS:
+		case Token::Type::LOWER_THAN_EQUALS:
 		case Token::Type::ADD:
 		case Token::Type::SUB:
 		case Token::Type::MUL:
