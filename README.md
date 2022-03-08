@@ -16,70 +16,80 @@ $ ./main main.aka
 
 ## Examples
 ### Hello world
-```rust
-fnc main() > int {
-	println("Hello, world");
+```js
+include "std/stdio.aka";
+
+function main() -> int {
+	puts("Hello, world\n");
 	return 0;
 }
 ```
 
 ### Includes
 test.aka:
-```rust
-fnc test() > int {
-	println("Hello, world!");
+```js
+include "std/stdio.aka";
+
+function test() -> int {
+	puts("Hello, world!");
 	return 0;
 }
 ```
 
 main.aka:
-```rust
+```js
 include "test.aka";
 
-fnc main() > int {
+function main() -> int {
 	test();
 	return 0;
 }
 ```
 
 ### Variables
-```rust
-fnc main() > int {
-	var varname: str = "Hello, world";
-	println(varname); // Hello, world
+```js
+include "std/stdio.aka";
+
+function main() -> int {
+	var varname: *char = "Hello, world";
+	puts(varname); puts("\n"); // Hello, world
 	varname = "Hello, world!!!";
-	println(varname); // Hello, world!!!
+	puts(varname); puts("\n"); // Hello, world!!!
 	return 0;
 }
 ```
 
 ### While
-```rust
-fnc main() > int {
+```js
+include "std/stdio.aka";
+
+function main() -> int {
 	var i: int = 0;
 
 	while i < 5 {
-		printint(i);
+		printint(i); puts("\n");
 		i = i + 1;
 	}
 
-	println("end");
+	return 0;
 }
 ```
 
 ### If
-```rust
-fnc test(num: int) > int {
+```js
+include "std/stdio.aka";
+
+function test(num: int) -> int {
 	if num + 5 > 10 {
-		println("Hello, world");
+		puts("Hello, world\n");
 	} else {
-		println("Bye, world");
+		puts("Bye, world\n");
 	}
 
 	return 0;
 }
 
-fnc main() > int {
+function main() > int {
 	test(5); // output: Bye, world
 	test(6); // output: Hello, world
 
@@ -88,8 +98,10 @@ fnc main() > int {
 ```
 
 ### Fibonacci
-```rust
-fnc fib(n: int) > int {
+```js
+include "std/stdio.aka";
+
+function fib(n: int) -> int {
 	if n < 2 {
 		return n;
 	}
@@ -99,16 +111,18 @@ fnc fib(n: int) > int {
 	return a + b;
 }
 
-fnc main() > int {
-	printint(fib(7)); // output: 13
+function main() -> int {
+	printint(fib(7)); puts("\n"); // output: 13
 
 	return 0;
 }
 ```
 
 ### Prime numbers
-```rust
-fnc isPrime(n: int) > bool {
+```js
+include "std/stdio.aka";
+
+function isPrime(n: int) -> bool {
 	if n == 1 {
 		return false;
 	}
@@ -129,14 +143,15 @@ fnc isPrime(n: int) > bool {
 	return counter < 2;
 }
 
-fnc main() > int {
+function main() -> int {
 	var n: int = 101;
 	printint(n);
 	if isPrime(n) {
-		println(" is prime");
+		puts(" is prime\n");
 	} else {
-		println(" is not prime");
+		puts(" is not prime\n");
 	}
+
 	return 0;
 }
 ```

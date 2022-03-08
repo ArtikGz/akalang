@@ -5,7 +5,16 @@
 Compiler::Compiler(std::vector<std::shared_ptr<Statement>> instructions) : instructions(instructions) {}
 
 std::string Compiler::compile_program() {
-	std::string program = "[bits 64]\nsegment .text\n\tglobal _start\n_start:\n\tmov rdi, [rsp]\n\tlea rsi, [rsp + 8]\n\tcall main\n\tmov rdi, rax\n\tmov rax, 60\n\tsyscall\n";
+	std::string program = "[bits 64]\nsegment .text\n"
+						"\tglobal _start\n"
+						"_start:\n"
+						"\tmov rdi, [rsp]\n"
+						"\tlea rsi, [rsp + 8]\n"
+						"\tlea rdx, [rsp + rdi*8+8+8]\n"
+						"\tcall main\n"
+						"\tmov rdi, rax\n"
+						"\tmov rax, 60\n"
+						"\tsyscall\n";
 	program += compile_builtin();
 
 	for (std::shared_ptr<Statement> stmt: instructions) {

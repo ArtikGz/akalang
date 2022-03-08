@@ -33,7 +33,10 @@ std::shared_ptr<Statement> Parser::parse_function() {
 	} 
 
 	lexer->expect_next_token(Token::Type::ARROW, "Parsing error: expected type after function arguments");
-	stmt->fnc->return_type = get_type_from_string(count_stars(), lexer->expect_next_token(Token::Type::NAME, "Parsing error: expected a name as function type").get_value());
+
+	size_t stars = count_stars();
+	std::string typestr = lexer->expect_next_token(Token::Type::NAME, "Parsing error: expected a name as function type").get_value();
+	stmt->fnc->return_type = get_type_from_string(stars, typestr);
 
 	lexer->expect_next_token(Token::Type::OPEN_CURLY, "Parsing error: expected block after function declaration");
 	stmt->fnc->body = parse_block();
@@ -198,7 +201,7 @@ std::shared_ptr<Statement> Parser::parse_name() {
 			stmt->expr->func_call = parse_func_call(token);
 			return stmt;
 		}
-		default: Utils::error("Parsing error: exppected '=' or '(' symbol after using a name as an statemeent"); exit(1);
+		default: Utils::error("Parsing error: exppected '=' or '(' symbol after using a name as an statement"); exit(1);
 	}
 }
 
@@ -284,7 +287,21 @@ std::shared_ptr<Expr> Parser::parse_primary_expr(Token token) {
 
 		case Token::Type::LITERAL_STRING: {
 			expr->type = EXPR_TYPE_LITERAL_STRING;
-			expr->string = token.get_value(); // TODO add string parse
+			std::string str = token.get_value();
+			int strsize = str.size();
+			for (int i = 0; i < strsize; i++) {
+				if (str[i] == '\\') {
+					switch (str[i + 1]) {
+						case 'n':
+							str.replace(i, i + 2, "\n");
+							i += 1;
+							break;
+						default: Utils::error("Parsing error: unrecognized escaping sequence"); exit(1);
+					}
+				}
+			}
+
+			expr->string = str; 
 			return expr;
 		}
 
@@ -298,6 +315,14 @@ std::shared_ptr<Expr> Parser::parse_primary_expr(Token token) {
 			expr->var_read = varRead;
 			return expr;
 		}
+
+		case Token::Type::SUB: {
+			Token n = lexer->expect_next_token(Token::Type::LITERAL_NUMBER, "Parsing error: only numbers are expected after minus simbol");
+			expr->type = EXPR_TYPE_LITERAL_NUMBER;
+			expr->number = atoi(token.get_value().c_str());
+			return expr;
+		}
+
 		default: Utils::error("Unexpected parsing expression: " + token.get_value()); exit(1);
 	}
 }
