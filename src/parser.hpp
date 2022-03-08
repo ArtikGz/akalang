@@ -6,6 +6,11 @@
 #include "token.hpp"
 #include "lexer.hpp"
 
+#define VAR_TYPE(varType, starsC) (VarType) { \
+										.stars = starsC, \
+										.type = varType  \
+									}
+
 typedef struct VarType VarType;
 typedef struct Func_Arg Func_Arg;
 typedef struct Expr Expr;
@@ -117,6 +122,7 @@ struct Var_Asign {
 	std::string name;
 	VarType type;
 	std::shared_ptr<Expr> value;
+	bool is_ptr;
 };
 
 struct Ret {

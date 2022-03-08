@@ -4,13 +4,21 @@
 
 Parser::Parser(std::unique_ptr<Lexer>&& lexer) : tokens(lexer->get_tokens()), lexer(std::move(lexer)) {}
 std::vector<std::shared_ptr<Statement>> Parser::parse_code() {
-	std::vector<std::shared_ptr<Statement>> fnc_vector;
+	std::vector<std::shared_ptr<Statement>> stmt_vector;
 	while (!lexer->is_parsed()) {
-		lexer->next_token();
-		fnc_vector.push_back(parse_function());
+		Token token = lexer->next_token();
+		switch (token.get_type()) {
+			case Token::Type::FUNCTION:
+				stmt_vector.push_back(parse_function());
+				break;
+
+			default:
+				Utils::error("Unknown top level expression");
+				exit(1);
+		}
 	}
 
-	return fnc_vector;
+	return stmt_vector;
 }
 
 std::shared_ptr<Statement> Parser::parse_function() {
@@ -123,6 +131,26 @@ std::vector<std::shared_ptr<Statement>> Parser::parse_block() {
 			case Token::Type::WHILE:
 				block.push_back(parse_while());
 				continue;
+			case Token::Type::MUL: {
+				// if extra stars report an error and exit
+				size_t stars = count_stars();
+				if (stars != 0) {
+					Utils::error("Parsing error: unexpected number of stars on left hand side");
+					exit(1);
+				}
+
+				std::shared_ptr<Var_Asign> var = std::make_shared<Var_Asign>();
+				var->name = lexer->expect_next_token(Token::Type::NAME, "Parsing error: expected name after star on statement").get_value();
+				var->is_ptr = true;
+				lexer->expect_next_token(Token::Type::EQUALS, "Parsing error: expected equals after left hand side on pointer var reasignation");
+				var->value = parse_expr(lexer->next_token());
+
+				std::shared_ptr<Statement> stmt = std::make_shared<Statement>();
+				stmt->type = STMT_TYPE_VAR_REASIGNATION;
+				stmt->var = var;
+				block.push_back(stmt);
+				break;
+			}
 			case Token::Type::CLOSE_CURLY: 
 				unfinished_block = false;
 				break;

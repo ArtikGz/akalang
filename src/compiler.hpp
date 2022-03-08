@@ -5,11 +5,6 @@
 #include "parser.hpp"
 #include "lexer.hpp"
 
-#define VAR_TYPE(varType, starsC) (VarType) { \
-										.stars = starsC, \
-										.type = varType  \
-									}
-
 typedef struct {
 	int rbp_offset;
 	VarType type;

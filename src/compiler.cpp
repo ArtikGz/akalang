@@ -18,7 +18,15 @@ std::string Compiler::compile_program() {
 	program += compile_builtin();
 
 	for (std::shared_ptr<Statement> stmt: instructions) {
-		program += compile_function(stmt);
+		switch (stmt->type) {
+			case STMT_TYPE_FUNCTION_DECLARATION: 
+				program += compile_function(stmt);
+				break;
+
+			default:
+				Utils::error("Unknown top level statement");
+				exit(1);
+		}
 	}
 	program += build_data_segment();
 	program += build_bss_segment();
@@ -257,7 +265,17 @@ std::string Compiler::compile_var_reasignation(std::shared_ptr<Statement> stmt, 
 	Var_Declared vd = si.var_declare[stmt->var->name];
 
 	ss << compile_expr(stmt->var->value, si);
-	ss << "\tmov [rbp - " << vd.rbp_offset << "], "  << get_return_reg_by_data_type(vd.type) << "\n";
+
+	if (stmt->var->is_ptr) {
+		ss << "\tmov rbx, [rbp - " << vd.rbp_offset << "]\n";
+		VarType v;
+		v.type = vd.type.type;
+		v.stars = vd.type.stars - 1;
+		ss << "\tmov " << get_data_size_by_data_type(v) << " [rbx], " << get_return_reg_by_data_type(v) << "\n";
+		ss << "\tmov [rbp - " << vd.rbp_offset << "], rbx\n";
+	} else {
+		ss << "\tmov [rbp - " << vd.rbp_offset << "], "  << get_return_reg_by_data_type(vd.type) << "\n";
+	}
 	return ss.str();
 }
 
@@ -459,7 +477,6 @@ std::string Compiler::build_data_segment() {
 	for (const std::string& str: string_data_segment) {
 		compiled_data_segment << "\tV" << c++ << " db " << str;
 	}
-	compiled_data_segment << "\tln db 0x0A\n";
 
 	return compiled_data_segment.str();
 }
@@ -467,6 +484,6 @@ std::string Compiler::build_data_segment() {
 std::string Compiler::build_bss_segment() {
 	std::stringstream compiled_bss_segment;
 	compiled_bss_segment << "segment .bss\n";
-	compiled_bss_segment << "\tinputstr resb 50\n";
+	// TODO: global variables
 	return compiled_bss_segment.str();
 }
