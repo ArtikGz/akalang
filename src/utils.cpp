@@ -21,8 +21,14 @@ std::string Utils::read_file(const std::string& filepath) {
 	return std::string(buf.begin(), buf.end());
 }
 
-void Utils::error(const std::string& message, ...) {
+void Utils::error(const std::string& message) {
 	std::cerr << Colors::RED << message << Colors::RESET << std::endl;
+	exit(1);
+}
+
+void Utils::error(const std::string& message, TokenLoc token) {
+	std::cerr << Colors::RED << "(" << token.filename << ", " << token.row;
+	std::cerr << ":" << token.column << ") " << message << Colors::RESET << std::endl;
 	exit(1);
 }
 

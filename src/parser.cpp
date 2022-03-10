@@ -13,7 +13,7 @@ std::vector<std::shared_ptr<Statement>> Parser::parse_code() {
 				break;
 
 			default:
-				Utils::error("Unknown top level expression");
+				Utils::error("Unknown top level expression", token.get_loc());
 				exit(1);
 		}
 	}

@@ -11,7 +11,7 @@ function main(argc: int, argv: **char, env: **char) -> int {
 
 	*test = 67;
 	test = test - 2;
-
+	
 	puts(test); puts("\n");
 	return 0;
 }

@@ -1,6 +1,18 @@
 #pragma once
 #include <string>
 
+class TokenLoc {
+public:
+	size_t row;
+	size_t column;
+	std::string filename;
+
+	TokenLoc(size_t row, size_t column, std::string filename) 
+		: row(row), column(column), filename(filename) {}
+
+	TokenLoc() {}
+};	
+
 class Token {
 public:
 	enum Type {
@@ -44,10 +56,13 @@ public:
 private:
 	Type type;
 	std::string value;
+	TokenLoc loc;
 
 public:
 	void set_type(Type type);
 	Type get_type();
 	void set_value(std::string value);
 	std::string get_value();
+	void set_loc(TokenLoc loc);
+	TokenLoc get_loc();
 };

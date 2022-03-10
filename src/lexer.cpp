@@ -1,5 +1,6 @@
 #include <iostream>
 #include "lexer.hpp"
+#include "token.hpp"
 
 Token Lexer::get_next_token() {
 	Token token;
@@ -20,9 +21,13 @@ Token Lexer::get_next_token() {
 			token.set_type(Token::Type::LITERAL_STRING);
 			token.set_value(form_string());
 		} else {
-			Utils::error("Unknown token found: \"" + file_content.substr(index, file_content.size() - index) + "\"");
+			Utils::error("Unknown token found ", TokenLoc(this->row, this->column, this->filename));
 		}
 	}
+
+	
+	column += token.get_value().size();
+	token.set_loc(TokenLoc(this->row, this->column, this->filename));
 	return token;
 }
 
@@ -48,11 +53,17 @@ bool Lexer::is_number(char c) {
 }
 
 bool Lexer::is_letter(char c) {
-	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_';
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
 
 void Lexer::skip_whitespace() {
-	while (Utils::is_blankspace(file_content[index]) && index < file_content.size()) {
+	while (Utils::is_blankspace(file_content[index]) && index < (int) file_content.size()) {
+		if (file_content[index] == '\n') {
+			row += 1;
+			column = 0;
+		}
+
+		column += 1;
 		index += 1;
 	}
 }
@@ -89,7 +100,7 @@ Token Lexer::expect_next_token(Token::Type token_type, std::string error_msg) {
 	if (this->tokens[index].get_type() == token_type) {
 		return this->tokens[index++];
 	} else {
-		Utils::error(error_msg);
+		Utils::error(error_msg, this->tokens[index].get_loc());
 		exit(1);
 	}
 }
@@ -150,21 +161,14 @@ void Lexer::set_file_content(std::string file_content) { this->file_content = fi
 std::string Lexer::get_file_content() { return this->file_content; }
 void Lexer::set_tokens(std::vector<Token> tokens) { this->tokens = tokens; }
 std::vector<Token> Lexer::get_tokens() { return this->tokens; }
+void Lexer::set_index(long index) { this->index = index; }
+long Lexer::get_index() { return this->index; }
 
-Lexer::Lexer() {}
-Lexer::Lexer(std::string filepath) : file_content(Utils::read_file(filepath)) {
-	this->index = 0;
+Lexer::Lexer() : index(0) {}
+Lexer::Lexer(std::string filepath) : file_content(Utils::read_file(filepath)), index(0), row(1), column(0), filename(filepath) {
 	register_keywords();
 	tokenize();
 }
 
-std::unique_ptr<Lexer> Lexer::from_content(std::string content) {
-  std::unique_ptr<Lexer> lexer = std::make_unique<Lexer>();
-	lexer->set_file_content(content);
-	lexer->index = 0;
-	lexer->register_keywords();
-	lexer->tokenize();
-	return lexer;
-}
 
 static_assert(Token::Type::TOKEN_COUNTER == 33, "Unhandled TOKEN_COUNTER on lexer.cpp");

@@ -12,6 +12,10 @@ private:
 	std::vector<Token> tokens;
 	long index;
 
+	size_t row;
+	size_t column;
+	std::string filename;
+
 	Token get_next_token();
 	bool has_more_tokens();
 	void tokenize();
@@ -28,6 +32,8 @@ public:
 	std::string get_file_content();
 	void set_tokens(std::vector<Token> tokens);
 	std::vector<Token> get_tokens();
+	void set_index(long index);
+	long get_index();
 	Token expect_next_token(Token::Type token_type, std::string error_msg);
 
 	/**
@@ -57,7 +63,6 @@ public:
 	 */
 	Token explore_last_token();
 	bool is_parsed();
-	static std::unique_ptr<Lexer> from_content(std::string content);
 	Lexer(std::string filepath);
 	Lexer();
 };

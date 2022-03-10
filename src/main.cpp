@@ -15,9 +15,13 @@ int main(int argc, char** argv) {
 
 	std::string filename = argv[1];
 	std::vector<std::string> filenames;
-	std::string preprocessed_file = Preprocessor::preprocess_includes(filename, filenames);
 
-	std::unique_ptr<Lexer> lex = Lexer::from_content(preprocessed_file);
+	std::vector<Token> tokens;
+	Preprocessor::preprocess_includes(filename, filenames, tokens);
+
+	std::unique_ptr<Lexer> lex = std::make_unique<Lexer>();
+	lex->set_tokens(tokens);
+
 	Parser parser = Parser(std::move(lex));
 	std::vector<std::shared_ptr<Statement>> statements = parser.parse_code();
 

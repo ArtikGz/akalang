@@ -6,14 +6,18 @@
 #include "lexer.hpp"
 #include "token.hpp"
 
-std::string Preprocessor::preprocess_includes(const std::string& filename, std::vector<std::string>& global_filenames) {
+void Preprocessor::preprocess_includes(const std::string& filename, std::vector<std::string>& global_filenames, std::vector<Token>& tokens) {
 	std::stringstream fstring;
 
 	Lexer lex(filename);
+	std::vector<Token> toks = lex.get_tokens();
 	while (lex.next_token().get_type() == Token::Type::INCLUDE_DIRECTIVE) {
 		std::string name = lex.expect_next_token(Token::Type::LITERAL_STRING, "Preprocessing error: expected string after include").get_value();
-		lex.set_file_content(lex.get_file_content().erase(0, lex.get_file_content().find_first_of("\n") + 1));
 		lex.expect_next_token(Token::Type::SEMICOLON, "Preprocessing error: expected semicolon after include directive");
+
+		toks.erase(toks.begin());
+		toks.erase(toks.begin());
+		toks.erase(toks.begin());
 
 		bool skip = false;
 		for (auto n: global_filenames) {
@@ -25,9 +29,10 @@ std::string Preprocessor::preprocess_includes(const std::string& filename, std::
 
 		if (!skip) {
 			global_filenames.push_back(name);
-			fstring << preprocess_includes(name, global_filenames) << "\n";	
+			preprocess_includes(name, global_filenames, tokens);
 		}
 	}
 
-	return fstring.str() + lex.get_file_content();
+	tokens.reserve(tokens.size() + toks.size());
+	tokens.insert(tokens.end(), toks.begin(), toks.end());
 }
