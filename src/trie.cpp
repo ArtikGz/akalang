@@ -28,7 +28,7 @@ Token::Type Trie::lookup(std::string& code, long& index) {
   std::shared_ptr<Node> actual_node = root;
   long i = index;
 
-  while (get_child_node(actual_node, code, i) != nullptr && i < code.size() && !Utils::is_blankspace(code[i])) {
+  while (get_child_node(actual_node, code, i) != nullptr && i < (int) code.size() && !Utils::is_blankspace(code[i])) {
     actual_node = get_child_node(actual_node, code, i++);
   }
 

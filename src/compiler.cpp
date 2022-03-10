@@ -326,7 +326,7 @@ std::string Compiler::compile_string(std::shared_ptr<Expr> expr) {
 	int data_identifier = string_data_segment.size();
 	std::string compiled_string;
 	char tmp[6] = {0};
-	for (int i = 0; i < expr->string.length(); i++) {
+	for (int i = 0; i < (int) expr->string.length(); i++) {
 		sprintf(tmp, "0x%02x,", expr->string[i]);
 		compiled_string += tmp;
 	}
