@@ -32,7 +32,7 @@ Token Lexer::get_next_token() {
 }
 
 bool Lexer::has_more_tokens() {
-	return this->index < file_content.size();
+	return this->index < (long) file_content.size();
 }
 
 void Lexer::tokenize() {
@@ -118,7 +118,7 @@ Token Lexer::explore_last_token() {
 }
 
 bool Lexer::is_parsed() {
-	return this->tokens.size() <= index;
+	return (long) this->tokens.size() <= index;
 }
 
 void Lexer::register_keywords() {
