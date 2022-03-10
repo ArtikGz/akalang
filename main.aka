@@ -1,0 +1,17 @@
+include "std/string.aka";
+include "std/stdio.aka";
+
+function main(argc: int, argv: **char, env: **char) -> int {
+	var test: *char = "Hello, world";
+	*test = 65;
+	test = test + 1;
+
+	*test = 66;
+	test = test + 1;
+
+	*test = 67;
+	test = test - 2;
+	
+	puts(test); puts("\n");
+	return 0;
+}

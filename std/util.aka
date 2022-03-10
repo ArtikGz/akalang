@@ -1,0 +1,22 @@
+include "std/string.aka";
+
+function getenv(env: **char, name: *char) -> *char { 
+    var namelen: int = strlen(name);
+
+    while *env != 0 {
+        var n: int = find_first_of(*env, "=");
+
+        if n == namelen {
+            if strneq(*env, name, n) {
+                var ret: *char = 0;
+                ret = *env + n;
+
+                return ret + 1;
+            }
+        }
+
+		env = env + 8;
+	}
+
+    return 0;
+}

@@ -1,0 +1,10 @@
+include "std/string.aka";
+include "std/syscall.aka";
+include "std/util.aka";
+
+function puts(str: *char) -> int {
+	var len: int = strlen(str);
+	__syscall_write(1, str, len);
+	
+	return 0;
+}
